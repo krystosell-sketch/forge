@@ -21,7 +21,7 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;width:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow:hidden;user-select:none}
 #app{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:480px;margin:0 auto;position:relative;overflow:hidden}
-.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:calc(72px + var(--safe-bot));scroll-behavior:smooth}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:calc(110px + var(--safe-bot));scroll-behavior:smooth}
 .screen::-webkit-scrollbar{display:none}
 
 /* TOPBAR */
@@ -228,12 +228,84 @@ const DAYS_ORDER = ['Full Body','Upper','Lower','Arms/Delts'];
 const DAY_ICONS = {'Full Body':'🏋️','Upper':'💪','Lower':'🦵','Arms/Delts':'💥'};
 
 // ═══════════════════════════════════════
-// STORAGE
+// SUPABASE CONFIG
+// ═══════════════════════════════════════
+const SUPA_URL = 'https://awsxxvtfzflyguksmhhk.supabase.co';
+const SUPA_KEY = 'sb_publishable_ig1CLmZl6ed--GbQ6jiCMA_WfNubTwx';
+const SUPA_HEADERS = {
+  'Content-Type': 'application/json',
+  'apikey': SUPA_KEY,
+  'Authorization': 'Bearer ' + SUPA_KEY
+};
+
+// ═══════════════════════════════════════
+// LOCAL STORAGE (fallback + cache)
 // ═══════════════════════════════════════
 const DB = {
   get(k){try{return JSON.parse(localStorage.getItem('fg_'+k))}catch{return null}},
   set(k,v){localStorage.setItem('fg_'+k,JSON.stringify(v))}
 };
+
+// ═══════════════════════════════════════
+// SUPABASE SYNC
+// ═══════════════════════════════════════
+const USER_ID = (()=>{
+  let id = localStorage.getItem('fg_userid');
+  if(!id){id='user_'+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem('fg_userid',id);}
+  return id;
+})();
+
+async function supaUpsert(table, data){
+  try{
+    await fetch(`${SUPA_URL}/rest/v1/${table}?on_conflict=id`,{
+      method:'POST',
+      headers:{...SUPA_HEADERS,'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify(data)
+    });
+  }catch(e){console.warn('Supabase sync error:',e);}
+}
+
+async function supaGet(table, id){
+  try{
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?id=eq.${id}`,{headers:SUPA_HEADERS});
+    const data = await r.json();
+    return data?.[0] || null;
+  }catch(e){return null;}
+}
+
+async function syncToCloud(){
+  await supaUpsert('profiles',{id:USER_ID, data:{profile:S.profile,programState:S.programState,apiKey:S.apiKey,chatHistory:S.chatHistory}, updated_at:new Date().toISOString()});
+  await supaUpsert('program_state',{id:USER_ID, data:S.programState, updated_at:new Date().toISOString()});
+}
+
+async function syncSessionToCloud(session){
+  await supaUpsert('sessions',{id:session.id, profile_id:USER_ID, data:session, created_at:new Date().toISOString()});
+}
+
+async function loadFromCloud(){
+  try{
+    // Load profile
+    const prof = await supaGet('profiles', USER_ID);
+    if(prof?.data){
+      if(prof.data.profile) S.profile = prof.data.profile;
+      if(prof.data.programState) S.programState = prof.data.programState;
+      if(prof.data.apiKey) S.apiKey = prof.data.apiKey;
+      if(prof.data.chatHistory) S.chatHistory = prof.data.chatHistory;
+    }
+    // Load sessions
+    const r = await fetch(`${SUPA_URL}/rest/v1/sessions?profile_id=eq.${USER_ID}&order=created_at.desc`,{headers:SUPA_HEADERS});
+    const sessions = await r.json();
+    if(sessions && sessions.length > 0){
+      S.history = sessions.map(s=>s.data);
+    }
+    // Save to local cache
+    saveLocal();
+    return true;
+  }catch(e){
+    console.warn('Could not load from cloud, using local data');
+    return false;
+  }
+}
 
 // ═══════════════════════════════════════
 // STATE
@@ -248,13 +320,20 @@ let S = {
   apiKey: DB.get('apiKey') || '',
 };
 
-function save(){
+function saveLocal(){
   DB.set('profile',S.profile);
   DB.set('history',S.history);
   DB.set('active',S.active);
   DB.set('programState',S.programState);
   DB.set('chatHistory',S.chatHistory);
   DB.set('apiKey',S.apiKey);
+}
+
+function save(){
+  saveLocal();
+  // Sync profile/state to cloud (debounced)
+  clearTimeout(window._syncTimer);
+  window._syncTimer = setTimeout(()=>syncToCloud(), 1500);
 }
 
 // ═══════════════════════════════════════
@@ -640,6 +719,7 @@ function finishWorkout(){
     exercises:aw.exercises,volume:vol
   };
   S.history.unshift(session);
+  syncSessionToCloud(session);
 
   // Advance program state
   S.programState.daysCompleted++;
@@ -1362,11 +1442,22 @@ function fmtAgo(ts){
 // ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
-if(!S.profile){
-  renderSetup();
-}else{
-  nav('home');
-}
+// Load from cloud then init
+(async()=>{
+  const indicator = document.createElement('div');
+  indicator.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#c8ff00;font-family:Bebas Neue,sans-serif;font-size:28px;letter-spacing:3px;z-index:999';
+  indicator.textContent='CHARGEMENT...';
+  document.body.appendChild(indicator);
+  
+  await loadFromCloud();
+  document.body.removeChild(indicator);
+  
+  if(!S.profile){
+    renderSetup();
+  }else{
+    nav('home');
+  }
+})();
 </script>
 </body>
 </html>
