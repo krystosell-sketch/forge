@@ -990,16 +990,16 @@ function renderCoach(){
     :S.chatHistory.map(m=>`<div class="chat-msg ${m.role}">${m.content}</div>`).join('');
 
   scr.style.paddingBottom='0';
-  scr.style.display='flex';
-  scr.style.flexDirection='column';
   scr.style.overflow='hidden';
   scr.innerHTML=`
-    <div id="chat-messages" style="flex:1;overflow-y:auto;padding:10px 14px calc(80px + var(--safe-bot));display:flex;flex-direction:column;gap:10px">
-      ${msgs}
-    </div>
-    <div style="padding:10px 14px calc(10px + var(--safe-bot));background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0">
-      <input class="chat-input" id="coach-input" type="text" placeholder="Message au coach..." onkeydown="if(event.key==='Enter')sendCoachInput()">
-      <button class="btn btn-primary btn-sm" onclick="sendCoachInput()">➤</button>
+    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+      <div id="chat-messages" style="flex:1;overflow-y:auto;padding:10px 14px 16px;display:flex;flex-direction:column;gap:10px">
+        ${msgs}
+      </div>
+      <div style="padding:10px 14px calc(80px + var(--safe-bot));background:var(--bg2);border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0">
+        <input class="chat-input" id="coach-input" type="text" placeholder="Message au coach..." onkeydown="if(event.key==='Enter')sendCoachInput()">
+        <button class="btn btn-primary btn-sm" onclick="sendCoachInput()">➤</button>
+      </div>
     </div>`;
 
   setTimeout(()=>{const el=document.getElementById('chat-messages');if(el)el.scrollTop=el.scrollHeight;},100);
