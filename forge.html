@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d0d0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FORGE</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0d0d; --bg2:#141414; --bg3:#1c1c1c; --bg4:#242424;
+  --accent:#c8ff00; --accent2:#ff4040; --accent3:#40c8ff; --accent4:#ff9d00;
+  --text:#f5f5f0; --text2:#999; --text3:#555;
+  --border:#2a2a2a; --radius:14px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow:hidden;user-select:none}
+#app{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:480px;margin:0 auto;position:relative;overflow:hidden}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:calc(72px + var(--safe-bot));scroll-behavior:smooth}
+.screen::-webkit-scrollbar{display:none}
+
+/* TOPBAR */
+.topbar{padding:calc(var(--safe-top) + 10px) 16px 10px;background:rgba(13,13,13,0.95);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;backdrop-filter:blur(20px)}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;color:var(--accent)}
+.topbar-right{display:flex;gap:8px;align-items:center}
+
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(13,13,13,0.97);border-top:1px solid var(--border);display:flex;align-items:center;padding:6px 0 calc(6px + var(--safe-bot));z-index:100;backdrop-filter:blur(20px)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:5px 0;transition:all .15s}
+.nav-item:active{transform:scale(.9)}
+.nav-icon{font-size:20px;line-height:1}
+.nav-label{font-size:9px;font-weight:600;letter-spacing:.8px;color:var(--text3);transition:color .15s;text-transform:uppercase}
+.nav-item.active .nav-label{color:var(--accent)}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .15s;letter-spacing:.3px}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:var(--accent);color:#0d0d0d}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:rgba(255,64,64,.12);color:var(--accent2);border:1px solid rgba(255,64,64,.25)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-sm{padding:7px 12px;font-size:12px;border-radius:8px}
+.btn-full{width:100%}
+.btn-icon{width:36px;height:36px;padding:0;border-radius:9px}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin:10px 14px;transition:border-color .15s}
+.card-sm{padding:10px 12px}
+.card-title{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px}
+
+/* INPUTS */
+input[type=text],input[type=number],input[type=email],textarea,select{background:var(--bg3);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:11px 13px;width:100%;outline:none;transition:border-color .15s;-webkit-appearance:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+input[type=number]{font-family:'JetBrains Mono',monospace;font-size:16px;text-align:center}
+::placeholder{color:var(--text3)}
+select option{background:var(--bg3)}
+
+/* FORM */
+.form-group{margin-bottom:12px}
+.label{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:5px;letter-spacing:.5px;display:block}
+
+/* SECTION HEADER */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 4px}
+.sec-hdr h2{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:1.5px}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:flex;align-items:flex-end;animation:fadeIn .2s ease}
+.modal-overlay.center{align-items:center;padding:16px}
+.modal{background:var(--bg2);border-radius:20px 20px 0 0;width:100%;max-width:480px;margin:0 auto;padding:18px 16px calc(18px + var(--safe-bot));max-height:92vh;overflow-y:auto;animation:slideUp .28s ease;border-top:1px solid var(--border)}
+.modal.center-modal{border-radius:18px;max-height:80vh;padding:18px 16px}
+.modal::-webkit-scrollbar{display:none}
+.modal-handle{width:32px;height:3px;background:var(--border);border-radius:2px;margin:0 auto 14px}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1.5px;margin-bottom:14px}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* TAGS */
+.tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.5px;background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.tag-accent{background:rgba(200,255,0,.1);color:var(--accent);border-color:rgba(200,255,0,.25)}
+.tag-blue{background:rgba(64,200,255,.1);color:var(--accent3);border-color:rgba(64,200,255,.25)}
+.tag-orange{background:rgba(255,157,0,.1);color:var(--accent4);border-color:rgba(255,157,0,.25)}
+.tag-red{background:rgba(255,64,64,.1);color:var(--accent2);border-color:rgba(255,64,64,.25)}
+
+/* STAT BOX */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-box{background:var(--bg3);border-radius:11px;padding:12px;border:1px solid var(--border)}
+.stat-val{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600;color:var(--text)}
+.stat-lbl{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* REST TIMER */
+.rest-timer{position:fixed;bottom:calc(80px + var(--safe-bot));left:50%;transform:translateX(-50%);width:calc(100% - 28px);max-width:452px;background:var(--bg2);border:1px solid rgba(200,255,0,.4);border-radius:13px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;z-index:50;animation:slideUp .25s ease;box-shadow:0 0 40px rgba(200,255,0,.1)}
+.timer-val{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;color:var(--accent)}
+.timer-bar{height:3px;background:var(--border);border-radius:2px;margin-top:5px;overflow:hidden;width:120px}
+.timer-bar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width 1s linear}
+
+/* WORKOUT SCREEN */
+.ex-block{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin:8px 14px;overflow:hidden}
+.ex-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg3)}
+.ex-name{font-size:14px;font-weight:600;color:var(--accent3);cursor:pointer;text-decoration:none}
+.ex-name:hover{text-decoration:underline}
+.ex-meta{font-size:11px;color:var(--text3);margin-top:2px}
+.ex-technique{margin:0 14px 8px;padding:8px 10px;background:rgba(255,157,0,.08);border:1px solid rgba(255,157,0,.2);border-radius:8px;font-size:11px;color:var(--accent4);font-weight:600}
+.set-headers{display:grid;grid-template-columns:26px 1fr 1fr 50px 36px;gap:6px;padding:6px 14px;border-top:1px solid var(--border)}
+.set-hdr{font-size:10px;font-weight:600;color:var(--text3);text-align:center;letter-spacing:.5px}
+.set-row{display:grid;grid-template-columns:26px 1fr 1fr 50px 36px;gap:6px;align-items:center;padding:7px 14px;border-top:1px solid var(--border)}
+.set-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);text-align:center}
+.set-input{padding:7px 6px;font-size:14px;border-radius:7px;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;text-align:center;width:100%;outline:none;transition:border-color .15s;-webkit-appearance:none}
+.set-input:focus{border-color:var(--accent)}
+.set-rpe{padding:7px 4px;font-size:12px;border-radius:7px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-family:'JetBrains Mono',monospace;text-align:center;width:100%;outline:none;-webkit-appearance:none}
+.set-check{width:34px;height:34px;border-radius:8px;border:2px solid var(--border);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all .15s;flex-shrink:0}
+.set-check.done{background:rgba(200,255,0,.12);border-color:var(--accent);color:var(--accent)}
+.set-check:active{transform:scale(.88)}
+.last-perf{font-size:10px;color:var(--text3);padding:4px 14px 6px;font-style:italic}
+.last-perf span{color:var(--accent3)}
+
+/* HISTORY */
+.hist-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin:8px 14px;cursor:pointer;transition:border-color .15s}
+.hist-item:active{border-color:var(--accent)}
+.hist-date{font-size:11px;color:var(--text3);margin-bottom:3px}
+.hist-name{font-size:15px;font-weight:700;margin-bottom:6px}
+.hist-stats{display:flex;gap:12px;flex-wrap:wrap}
+.hist-stat{font-size:11px;color:var(--text2)}
+.hist-stat span{color:var(--text);font-weight:600}
+
+/* PROGRESS CHARTS */
+.chart-wrap{padding:0 14px;margin:6px 0}
+.mini-bars{display:flex;align-items:flex-end;gap:3px;height:70px}
+.mbar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.mbar{width:100%;border-radius:3px 3px 0 0;background:var(--accent);opacity:.7;min-height:3px;transition:height .4s ease}
+.mbar-lbl{font-size:8px;color:var(--text3);white-space:nowrap}
+
+/* STREAK */
+.streak-box{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(200,255,0,.07),rgba(64,200,255,.04));border:1px solid rgba(200,255,0,.18);border-radius:var(--radius);padding:14px;margin:10px 14px}
+.streak-num{font-family:'Bebas Neue',sans-serif;font-size:52px;color:var(--accent);line-height:1}
+
+/* ACTIVE BANNER */
+.active-banner{background:linear-gradient(135deg,rgba(200,255,0,.09),rgba(64,200,255,.06));border:1px solid rgba(200,255,0,.25);border-radius:var(--radius);padding:12px 14px;margin:10px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:7px;animation:pulse 1.5s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(200,255,0,.4)}70%{box-shadow:0 0 0 8px rgba(200,255,0,0)}100%{box-shadow:0 0 0 0 rgba(200,255,0,0)}}
+
+/* PROGRAM SCREEN */
+.day-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin:8px 14px;overflow:hidden;cursor:pointer;transition:border-color .15s}
+.day-card:active{border-color:var(--accent)}
+.day-card.completed{border-color:rgba(200,255,0,.3)}
+.day-header{display:flex;align-items:center;justify-content:space-between;padding:14px}
+.day-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1.5px}
+.day-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px}
+.ex-preview{padding:0 14px 12px;display:flex;flex-wrap:wrap;gap:5px}
+
+/* SETTINGS */
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid var(--border);cursor:pointer}
+.settings-row:active{background:var(--bg3)}
+.settings-title{font-size:14px;font-weight:500}
+.settings-sub{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* COACH CHAT */
+.chat-wrap{display:flex;flex-direction:column;gap:10px;padding:0 14px}
+.chat-msg{max-width:88%;padding:10px 13px;border-radius:14px;font-size:13px;line-height:1.6}
+.chat-msg.coach{background:var(--bg3);border:1px solid var(--border);align-self:flex-start;border-radius:4px 14px 14px 14px}
+.chat-msg.user{background:rgba(200,255,0,.12);border:1px solid rgba(200,255,0,.2);align-self:flex-end;border-radius:14px 4px 14px 14px}
+.chat-input-wrap{padding:10px 14px calc(10px + var(--safe-bot));background:var(--bg);border-top:1px solid var(--border);display:flex;gap:8px;position:sticky;bottom:0}
+.chat-input{flex:1;padding:10px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none}
+.chat-input:focus{border-color:var(--accent)}
+
+/* PROFILE SETUP */
+.setup-wrap{padding:30px 20px;display:flex;flex-direction:column;gap:16px;min-height:100%}
+.setup-logo{font-family:'Bebas Neue',sans-serif;font-size:48px;color:var(--accent);letter-spacing:4px;text-align:center}
+.setup-sub{font-size:14px;color:var(--text2);text-align:center;margin-top:-10px}
+
+/* PR tag */
+.pr-badge{font-size:9px;font-weight:800;color:var(--accent2);background:rgba(255,64,64,.12);border:1px solid rgba(255,64,64,.25);padding:2px 5px;border-radius:4px;letter-spacing:.5px;margin-left:5px}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:6px 0}
+
+/* MISC */
+.row{display:flex;gap:8px;align-items:center}
+.flex1{flex:1}
+.mt8{margin-top:8px}
+.mt12{margin-top:12px}
+.mt16{margin-top:16px}
+.empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:48px 28px;text-align:center}
+.empty-icon{font-size:44px;opacity:.25}
+.empty-text{font-size:14px;color:var(--text2);line-height:1.6}
+.chrono{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent3);font-weight:600}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar" id="topbar">
+    <div class="topbar-title">FORGE</div>
+    <div class="topbar-right" id="topbar-right"></div>
+  </div>
+  <div class="screen" id="screen"></div>
+  <nav class="bnav" id="bnav">
+    <div class="nav-item active" data-nav="home" onclick="nav('home')"><span class="nav-icon">🏠</span><span class="nav-label">Accueil</span></div>
+    <div class="nav-item" data-nav="workout" onclick="nav('workout')"><span class="nav-icon">🏋️</span><span class="nav-label">Séance</span></div>
+    <div class="nav-item" data-nav="progress" onclick="nav('progress')"><span class="nav-icon">📊</span><span class="nav-label">Progrès</span></div>
+    <div class="nav-item" data-nav="coach" onclick="nav('coach')"><span class="nav-icon">🤖</span><span class="nav-label">Coach</span></div>
+    <div class="nav-item" data-nav="settings" onclick="nav('settings')"><span class="nav-icon">⚙️</span><span class="nav-label">Réglages</span></div>
+  </nav>
+  <div class="rest-timer" id="rest-timer" style="display:none">
+    <div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:1px;font-weight:600;letter-spacing:.5px">REPOS</div>
+      <div class="timer-val" id="timer-val">2:00</div>
+      <div class="timer-bar"><div class="timer-bar-fill" id="timer-bar" style="width:100%"></div></div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="btn btn-ghost btn-sm" onclick="addTime(-15)">-15s</button>
+      <button class="btn btn-ghost btn-sm" onclick="addTime(15)">+15s</button>
+      <button class="btn btn-sm" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:18px;cursor:pointer" onclick="stopTimer()">✕</button>
+    </div>
+  </div>
+</div>
+<div id="modal-root"></div>
+
+<script>
+// ═══════════════════════════════════════
+// PROGRAM DATA (12 weeks)
+// ═══════════════════════════════════════
+const PROGRAM = {"1":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline Press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported DB Row","url":"https://youtu.be/Cmcv44jiQd0","technique":null,"sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":null,"sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Modified Zottman Curl","url":"https://youtu.be/J0l0qQCy80Q","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Close-Grip Dip","url":"https://youtu.be/G7bonPtkitM","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"EZ-Bar Curl","url":"https://youtu.be/wXjPZdhUzBQ","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}]},"2":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline Press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported DB Row","url":"https://youtu.be/Cmcv44jiQd0","technique":null,"sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":null,"sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Modified Zottman Curl","url":"https://youtu.be/J0l0qQCy80Q","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Close-Grip Dip","url":"https://youtu.be/G7bonPtkitM","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"EZ-Bar Curl","url":"https://youtu.be/wXjPZdhUzBQ","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}]},"3":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline Press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported Machine Row","url":"https://youtu.be/QZ7VZpjNTG8","technique":null,"sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":null,"sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Hammer Curl","url":"https://youtu.be/AS4FeNiHyKg","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Seated Dip Machine","url":"https://youtu.be/BRueufxDP2Q","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Alternating DB Curl","url":"https://youtu.be/kSxgX6HIYxQ","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}]},"4":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported T-Bar Row","url":"https://youtu.be/-FAxUZoPDc4","technique":null,"sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":null,"sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Modified Zottman Curl","url":"https://youtu.be/J0l0qQCy80Q","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Close-Grip Dip","url":"https://youtu.be/G7bonPtkitM","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Alternating DB Curl","url":"https://youtu.be/kSxgX6HIYxQ","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}]},"5":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported T-Bar Row","url":"https://youtu.be/-FAxUZoPDc4","technique":null,"sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":null,"sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Modified Zottman Curl","url":"https://youtu.be/J0l0qQCy80Q","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Close-Grip Dip","url":"https://youtu.be/G7bonPtkitM","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Alternating DB Curl","url":"https://youtu.be/kSxgX6HIYxQ","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}]},"6":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported T-Bar Row","url":"https://youtu.be/-FAxUZoPDc4","technique":null,"sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":null,"sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Modified Zottman Curl","url":"https://youtu.be/J0l0qQCy80Q","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Close-Grip Dip","url":"https://youtu.be/G7bonPtkitM","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Alternating DB Curl","url":"https://youtu.be/kSxgX6HIYxQ","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Dead Hang (optional)","url":"https://youtu.be/5M8uPbfQsbg","technique":null,"sets":2,"reps":"N/A","rest":"1-2 min","restSec":90}]},"7":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported T-Bar Row","url":"https://youtu.be/-FAxUZoPDc4","technique":null,"sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":null,"sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Modified Zottman Curl","url":"https://youtu.be/J0l0qQCy80Q","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Close-Grip Dip","url":"https://youtu.be/G7bonPtkitM","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Alternating DB Curl","url":"https://youtu.be/kSxgX6HIYxQ","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}]},"8":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":"Lengthened Partials (Extend Set)","sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":"Lengthened Partials (Extend Set)","sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported T-Bar Row","url":"https://youtu.be/-FAxUZoPDc4","technique":"Two Drop Sets (~25% per)","sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":"Weighted Static Hold (30 sec)","sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":"Lengthened Partials (Extend Set)","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Modified Zottman Curl","url":"https://youtu.be/J0l0qQCy80Q","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Close-Grip Dip","url":"https://youtu.be/G7bonPtkitM","technique":"Two Drop Sets (~25% per)","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Alternating DB Curl","url":"https://youtu.be/kSxgX6HIYxQ","technique":"Two Drop Sets (~25% per)","sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":"Myo-reps","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Dead Hang (optional)","url":"https://youtu.be/5M8uPbfQsbg","technique":null,"sets":2,"reps":"N/A","rest":"1-2 min","restSec":90}]},"9":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":"Lengthened Partials (Extend Set)","sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":"Lengthened Partials (Extend Set)","sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported T-Bar Row","url":"https://youtu.be/-FAxUZoPDc4","technique":"Two Drop Sets (~25% per)","sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":"Weighted Static Hold (30 sec)","sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":"Lengthened Partials (Extend Set)","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Modified Zottman Curl","url":"https://youtu.be/J0l0qQCy80Q","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Close-Grip Dip","url":"https://youtu.be/G7bonPtkitM","technique":"Two Drop Sets (~25% per)","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Alternating DB Curl","url":"https://youtu.be/kSxgX6HIYxQ","technique":"Two Drop Sets (~25% per)","sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":"Myo-reps","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}]},"10":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":"Lengthened Partials (Extend Set)","sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":"Lengthened Partials (Extend Set)","sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported T-Bar Row","url":"https://youtu.be/-FAxUZoPDc4","technique":"Two Drop Sets (~25% per)","sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":"Weighted Static Hold (30 sec)","sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":"Lengthened Partials (Extend Set)","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Modified Zottman Curl","url":"https://youtu.be/J0l0qQCy80Q","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Close-Grip Dip","url":"https://youtu.be/G7bonPtkitM","technique":"Two Drop Sets (~25% per)","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Alternating DB Curl","url":"https://youtu.be/kSxgX6HIYxQ","technique":"Two Drop Sets (~25% per)","sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":"Myo-reps","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}]},"11":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":"Lengthened Partials (Extend Set)","sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":"Lengthened Partials (Extend Set)","sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported T-Bar Row","url":"https://youtu.be/-FAxUZoPDc4","technique":"Two Drop Sets (~25% per)","sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":"Weighted Static Hold (30 sec)","sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":"Lengthened Partials (Extend Set)","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Modified Zottman Curl","url":"https://youtu.be/J0l0qQCy80Q","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Close-Grip Dip","url":"https://youtu.be/G7bonPtkitM","technique":"Two Drop Sets (~25% per)","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Alternating DB Curl","url":"https://youtu.be/kSxgX6HIYxQ","technique":"Two Drop Sets (~25% per)","sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":"Myo-reps","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}]},"12":{"Full Body":[{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Machine Incline press","url":"https://youtu.be/ad0NL7TH2-I","technique":null,"sets":2,"reps":"6-8","rest":"3-5 min","restSec":240},{"name":"Incline DB Y-Raise","url":"https://youtu.be/xaOQJjzNrd8","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lat Pulldown (Wide Grip)","url":"https://youtu.be/nDl3VjkLPQE","technique":"Lengthened Partials (Extend Set)","sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":"Lengthened Partials (Extend Set)","sets":1,"reps":"6-8","rest":"1-2 min","restSec":90}],"Upper":[{"name":"Chest-Supported T-Bar Row","url":"https://youtu.be/-FAxUZoPDc4","technique":"Two Drop Sets (~25% per)","sets":2,"reps":"8-10","rest":"2-3 min","restSec":150},{"name":"Barbell Shrug","url":"https://youtu.be/CQDTdasj9BA","technique":null,"sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"Machine Chest Press","url":"https://youtu.be/qTSTOVVr8rU","technique":"Weighted Static Hold (30 sec)","sets":2,"reps":"8-10","rest":"3-5 min","restSec":240},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Lying Reverse DB Flye","url":"https://youtu.be/MXGZHJFQ9bE","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Weighted Crunch","url":"https://youtu.be/Q_n8cSQLhog","technique":null,"sets":2,"reps":"6-8","rest":"1-2 min","restSec":90}],"Lower":[{"name":"Barbell RDL","url":"https://youtu.be/xbnan2iNh-Q","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Barbell Hip Thrust","url":"https://youtu.be/8RwbLtfLu6A","technique":null,"sets":2,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Squat (belt squat)","url":"https://youtu.be/v3N4tpPpmyQ","technique":null,"sets":1,"reps":"6-8","rest":"2-3 min","restSec":150},{"name":"Standing Calf Raise","url":"https://youtu.be/WMkCGNwo5ts","technique":"Lengthened Partials (Extend Set)","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}],"Arms/Delts":[{"name":"Overhead DB Triceps Extension","url":"https://youtu.be/5KX0EjOTMaI","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Modified Zottman Curl","url":"https://youtu.be/J0l0qQCy80Q","technique":null,"sets":1,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Close-Grip Dip","url":"https://youtu.be/G7bonPtkitM","technique":"Two Drop Sets (~25% per)","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Curl","url":"https://youtu.be/HJx1sIZKDqk","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"DB Wrist Extension","url":"https://youtu.be/uCAoI5FnLhs","technique":null,"sets":2,"reps":"8-10","rest":"1-2 min","restSec":90},{"name":"Alternating DB Curl","url":"https://youtu.be/kSxgX6HIYxQ","technique":"Two Drop Sets (~25% per)","sets":1,"reps":"6-8","rest":"1-2 min","restSec":90},{"name":"DB Lateral Raise","url":"https://youtu.be/Z8OrSIk_574","technique":"Myo-reps","sets":2,"reps":"8-10","rest":"1-2 min","restSec":90}]}};
+const DAYS_ORDER = ['Full Body','Upper','Lower','Arms/Delts'];
+const DAY_ICONS = {'Full Body':'🏋️','Upper':'💪','Lower':'🦵','Arms/Delts':'💥'};
+
+// ═══════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════
+const DB = {
+  get(k){try{return JSON.parse(localStorage.getItem('fg_'+k))}catch{return null}},
+  set(k,v){localStorage.setItem('fg_'+k,JSON.stringify(v))}
+};
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let S = {
+  profile: DB.get('profile') || null,
+  history: DB.get('history') || [],
+  active: DB.get('active') || null,
+  programState: DB.get('programState') || {week:1,daysCompleted:0,cycleCount:0},
+  currentNav: 'home',
+  chatHistory: DB.get('chatHistory') || [],
+  apiKey: DB.get('apiKey') || '',
+};
+
+function save(){
+  DB.set('profile',S.profile);
+  DB.set('history',S.history);
+  DB.set('active',S.active);
+  DB.set('programState',S.programState);
+  DB.set('chatHistory',S.chatHistory);
+  DB.set('apiKey',S.apiKey);
+}
+
+// ═══════════════════════════════════════
+// AUDIO (son de fin de timer)
+// ═══════════════════════════════════════
+function playBeep(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const beep=(freq,start,dur)=>{
+      const o=ctx.createOscillator();
+      const g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=freq;
+      g.gain.setValueAtTime(.3,ctx.currentTime+start);
+      g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+start+dur);
+      o.start(ctx.currentTime+start);o.stop(ctx.currentTime+start+dur);
+    };
+    beep(880,0,.1);beep(880,.15,.1);beep(1100,.3,.2);
+  }catch(e){}
+}
+
+// ═══════════════════════════════════════
+// TIMER
+// ═══════════════════════════════════════
+let timerInt=null,timerTotal=0,timerLeft=0;
+function startTimer(sec){
+  if(timerInt)clearInterval(timerInt);
+  timerTotal=sec;timerLeft=sec;
+  updateTimerUI();
+  document.getElementById('rest-timer').style.display='flex';
+  timerInt=setInterval(()=>{
+    timerLeft--;
+    if(timerLeft<=0){stopTimer();playBeep();return;}
+    updateTimerUI();
+  },1000);
+}
+function updateTimerUI(){
+  const m=Math.floor(timerLeft/60),s=timerLeft%60;
+  document.getElementById('timer-val').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+  document.getElementById('timer-bar').style.width=(timerLeft/timerTotal*100)+'%';
+}
+function stopTimer(){
+  if(timerInt){clearInterval(timerInt);timerInt=null;}
+  document.getElementById('rest-timer').style.display='none';
+}
+function addTime(s){timerLeft=Math.max(0,timerLeft+s);updateTimerUI();}
+
+// ═══════════════════════════════════════
+// CHRONO
+// ═══════════════════════════════════════
+let chronoInt=null;
+function startChrono(){
+  if(chronoInt)clearInterval(chronoInt);
+  chronoInt=setInterval(()=>{
+    if(S.active&&S.currentNav==='workout'){
+      const el=document.getElementById('chrono-display');
+      if(el)el.textContent='⏱ '+formatDur(Date.now()-S.active.startTime);
+    }
+  },1000);
+}
+function stopChrono(){if(chronoInt){clearInterval(chronoInt);chronoInt=null;}}
+
+// ═══════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════
+function nav(n){
+  S.currentNav=n;
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.classList.toggle('active',el.dataset.nav===n);
+  });
+  const screens={home:renderHome,workout:renderWorkout,progress:renderProgress,coach:renderCoach,settings:renderSettings};
+  if(screens[n])screens[n]();
+}
+
+// ═══════════════════════════════════════
+// PROFILE SETUP
+// ═══════════════════════════════════════
+function renderSetup(){
+  const scr=document.getElementById('screen');
+  document.getElementById('bnav').style.display='none';
+  scr.innerHTML=`
+    <div class="setup-wrap">
+      <div class="setup-logo">FORGE</div>
+      <div class="setup-sub">Ton assistant entraînement personnel</div>
+      <div style="margin-top:20px">
+        <div class="form-group"><label class="label">PRÉNOM</label><input type="text" id="s-name" placeholder="ex: Christophe"></div>
+        <div class="form-group"><label class="label">OBJECTIF PRINCIPAL</label>
+          <select id="s-goal">
+            <option value="hypertrophie">Hypertrophie (masse musculaire)</option>
+            <option value="force">Force</option>
+            <option value="athletisme">Performance athlétique</option>
+            <option value="perte_gras">Perte de gras</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="label">NIVEAU</label>
+          <select id="s-level">
+            <option value="debutant">Débutant (&lt; 1 an)</option>
+            <option value="intermediaire" selected>Intermédiaire (1-3 ans)</option>
+            <option value="avance">Avancé (3+ ans)</option>
+          </select>
+        </div>
+        <div class="row">
+          <div class="form-group flex1"><label class="label">ÂGE</label><input type="number" id="s-age" placeholder="35" inputmode="numeric" min="16" max="80"></div>
+          <div class="form-group flex1"><label class="label">POIDS CORPOREL (lbs)</label><input type="number" id="s-weight" placeholder="180" inputmode="decimal" min="80" max="400"></div>
+        </div>
+        <button class="btn btn-primary btn-full mt16" style="font-size:16px;padding:16px" onclick="saveProfile()">🔥 Commencer FORGE</button>
+      </div>
+    </div>`;
+}
+
+function saveProfile(){
+  const name=document.getElementById('s-name').value.trim();
+  if(!name){alert('Entre ton prénom pour continuer.');return;}
+  S.profile={
+    name,
+    goal:document.getElementById('s-goal').value,
+    level:document.getElementById('s-level').value,
+    age:parseInt(document.getElementById('s-age').value)||null,
+    weight:parseFloat(document.getElementById('s-weight').value)||null,
+    createdAt:Date.now()
+  };
+  save();
+  document.getElementById('bnav').style.display='flex';
+  nav('home');
+}
+
+// ═══════════════════════════════════════
+// HOME
+// ═══════════════════════════════════════
+function renderHome(){
+  const scr=document.getElementById('screen');
+  document.getElementById('topbar-right').innerHTML='';
+
+  const ps=S.programState;
+  const weekDays=DAYS_ORDER;
+  const nextDayIdx=ps.daysCompleted%4;
+  const nextDay=weekDays[nextDayIdx];
+  const weekNum=ps.week;
+
+  // Streak calc
+  let streak=0;
+  const today=new Date();today.setHours(0,0,0,0);
+  for(let d=0;d<60;d++){
+    const day=new Date(today);day.setDate(day.getDate()-d);
+    const has=S.history.some(h=>{const hd=new Date(h.date);hd.setHours(0,0,0,0);return hd.getTime()===day.getTime();});
+    if(has)streak++;
+    else if(d>0)break;
+  }
+
+  // Weekly volume
+  const weekVol=S.history.filter(h=>h.date>Date.now()-7*86400000).reduce((a,h)=>a+(h.volume||0),0);
+  const totalSessions=S.history.length;
+
+  const activeBanner=S.active?`
+    <div class="active-banner" onclick="nav('workout')">
+      <div><div style="font-size:13px;font-weight:700"><span class="pulse"></span>Séance en cours</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px">${S.active.dayName} — Sem. ${S.active.week}</div></div>
+      <span style="color:var(--accent);font-size:22px">›</span>
+    </div>`:'';
+
+  scr.innerHTML=`
+    ${activeBanner}
+    <div class="streak-box">
+      <div class="streak-num">${streak}</div>
+      <div>
+        <div style="font-size:15px;font-weight:700">Jours consécutifs</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px">${totalSessions} séances · ${fmtLbs(weekVol)} lbs cette sem.</div>
+      </div>
+    </div>
+    <div class="stat-grid" style="padding:0 14px;margin:4px 0">
+      <div class="stat-box"><div class="stat-val">${weekNum}/12</div><div class="stat-lbl">Semaine du programme</div></div>
+      <div class="stat-box"><div class="stat-val">${nextDayIdx+1}/4</div><div class="stat-lbl">Prochain jour</div></div>
+    </div>
+    <div class="sec-hdr"><h2>PROGRAMME — SEMAINE ${weekNum}</h2>${ps.cycleCount>0?`<span class="tag tag-blue">Cycle ${ps.cycleCount+1}</span>`:''}</div>
+    ${DAYS_ORDER.map((day,i)=>{
+      const done=i<nextDayIdx;
+      const isNext=i===nextDayIdx;
+      const exs=PROGRAM[weekNum][day]||[];
+      return `<div class="day-card${done?' completed':''}" onclick="${isNext?`startWorkout(${weekNum},'${day}')`:`showDayDetail(${weekNum},'${day}')`}">
+        <div class="day-header">
+          <div>
+            <div class="day-name">${DAY_ICONS[day]} ${day}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${exs.length} exercices</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            ${done?'<span class="tag tag-accent">✓ Complété</span>':''}
+            ${isNext?`<button class="btn btn-primary btn-sm">▶ Démarrer</button>`:''}
+          </div>
+        </div>
+        <div class="ex-preview">${exs.slice(0,4).map(e=>`<span class="tag">${e.name.split(' ').slice(0,2).join(' ')}</span>`).join('')}${exs.length>4?`<span class="tag">+${exs.length-4}</span>`:''}</div>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+// ═══════════════════════════════════════
+// SHOW DAY DETAIL (non-active day)
+// ═══════════════════════════════════════
+function showDayDetail(week,day){
+  const exs=PROGRAM[week][day]||[];
+  showModal(`
+    <div class="modal-handle"></div>
+    <div class="modal-title">${DAY_ICONS[day]} ${day} — Semaine ${week}</div>
+    ${exs.map(e=>`
+      <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <a href="${e.url}" target="_blank" class="ex-name" style="font-size:14px;font-weight:600;color:var(--accent3)">${e.name} 🔗</a>
+          <span class="tag">${e.sets}×${e.reps}</span>
+        </div>
+        ${e.technique?`<div style="font-size:11px;color:var(--accent4);margin-top:4px">⚡ ${e.technique}</div>`:''}
+        <div style="font-size:11px;color:var(--text3);margin-top:3px">Repos: ${e.rest}</div>
+      </div>`).join('')}
+  `);
+}
+
+// ═══════════════════════════════════════
+// START WORKOUT
+// ═══════════════════════════════════════
+function startWorkout(week,day){
+  if(S.active){
+    if(!confirm('Une séance est déjà en cours. La remplacer?'))return;
+    stopChrono();stopTimer();
+  }
+  const exs=PROGRAM[week][day]||[];
+  S.active={
+    id:uid(),week,dayName:day,startTime:Date.now(),
+    exercises:exs.map(e=>({
+      name:e.name,url:e.url,technique:e.technique,
+      targetReps:e.reps,rest:e.rest,restSec:e.restSec,
+      sets:Array.from({length:e.sets},()=>({weight:'',reps:'',rpe:'',done:false}))
+    }))
+  };
+  save();
+
+  // Show briefing prompt before navigating
+  if(S.apiKey){
+    showModal(`
+      <div class="modal-handle"></div>
+      <div style="text-align:center;padding:8px 0 12px">
+        <div style="font-size:32px;margin-bottom:8px">🤖</div>
+        <div style="font-weight:700;font-size:16px">Briefing du Coach</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:6px;line-height:1.5">Veux-tu un briefing personnalisé<br>pour ta séance ${day} de la semaine ${week}?</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+        <button class="btn btn-secondary" onclick="closeModal();nav('workout')">Non merci</button>
+        <button class="btn btn-primary" onclick="closeModal();nav('workout');getBriefing(${week},'${day}')">🤖 Briefing</button>
+      </div>`);
+  }else{
+    nav('workout');
+  }
+}
+
+// ═══════════════════════════════════════
+// WORKOUT SCREEN
+// ═══════════════════════════════════════
+function renderWorkout(){
+  const scr=document.getElementById('screen');
+  const aw=S.active;
+
+  document.getElementById('topbar-right').innerHTML=aw?`
+    <button class="btn btn-ghost btn-sm" onclick="showAbandon()">Abandonner</button>
+    <button class="btn btn-primary btn-sm" onclick="finishWorkout()">Terminer</button>`:'';
+
+  if(!aw){
+    scr.innerHTML=`<div class="empty">
+      <div class="empty-icon">🏋️</div>
+      <div class="empty-text">Aucune séance en cours.<br>Démarre un jour depuis l'accueil.</div>
+      <button class="btn btn-primary" onclick="nav('home')">Voir le programme</button>
+    </div>`;
+    return;
+  }
+
+  startChrono();
+
+  const elapsed=formatDur(Date.now()-aw.startTime);
+  scr.innerHTML=`
+    <div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:17px;font-weight:700">${DAY_ICONS[aw.dayName]||'🏋️'} ${aw.dayName}</div>
+        <div style="font-size:11px;color:var(--text2)" id="chrono-display">⏱ ${elapsed} · Sem. ${aw.week}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="showCoachDuring()">🤖</button>
+      </div>
+    </div>
+    ${aw.exercises.map((ex,ei)=>renderExBlock(ex,ei)).join('')}
+    <div style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-danger" onclick="showAbandon()">🚫 Abandonner</button>
+      <button class="btn btn-primary" onclick="finishWorkout()">🏁 Terminer</button>
+    </div>`;
+}
+
+function renderExBlock(ex,ei){
+  const lastPerf=getLastPerf(ex.name);
+  const lastPerfHtml=lastPerf?`<div class="last-perf">Dernière fois: <span>${lastPerf.weight} lbs × ${lastPerf.reps} reps</span> (${fmtAgo(lastPerf.date)})</div>`:'';
+
+  const setsHtml=ex.sets.map((s,si)=>{
+    const suggestW=lastPerf?lastPerf.weight:'';
+    const suggestR=lastPerf?lastPerf.reps:'';
+    return `<div class="set-row">
+      <div class="set-num">${si+1}</div>
+      <input class="set-input" type="number" placeholder="${suggestW||'lbs'}" value="${s.weight||''}" inputmode="decimal" min="0" step="2.5" onchange="updSet(${ei},${si},'weight',this.value)">
+      <input class="set-input" type="number" placeholder="${suggestR||ex.targetReps}" value="${s.reps||''}" inputmode="numeric" min="0" onchange="updSet(${ei},${si},'reps',this.value)">
+      <input class="set-rpe" type="number" placeholder="RPE" value="${s.rpe||''}" inputmode="numeric" min="1" max="10" onchange="updSet(${ei},${si},'rpe',this.value)">
+      <div class="set-check${s.done?' done':''}" onclick="toggleSet(${ei},${si})">${s.done?'✓':''}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="ex-block">
+    <div class="ex-header">
+      <div>
+        <a href="${ex.url}" target="_blank" class="ex-name">${ex.name} 🔗</a>
+        <div class="ex-meta">${ex.sets.length} séries · ${ex.targetReps} rép. · ${ex.rest}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-secondary btn-sm" onclick="addSet(${ei})">+</button>
+        <button class="btn btn-ghost btn-sm" onclick="delSet(${ei})">−</button>
+      </div>
+    </div>
+    ${ex.technique?`<div class="ex-technique">⚡ DERNIÈRE SÉRIE: ${ex.technique}</div>`:''}
+    ${lastPerfHtml}
+    <div class="set-headers">
+      <div></div>
+      <div class="set-hdr">LBS</div>
+      <div class="set-hdr">REPS</div>
+      <div class="set-hdr">RPE</div>
+      <div></div>
+    </div>
+    ${setsHtml}
+    <div style="padding:8px 14px 10px">
+      <button class="btn btn-ghost btn-full btn-sm" onclick="startTimer(${ex.restSec})">⏱ Timer repos (${ex.rest})</button>
+    </div>
+  </div>`;
+}
+
+function updSet(ei,si,field,val){
+  if(!S.active)return;
+  S.active.exercises[ei].sets[si][field]=field==='rpe'?parseInt(val)||'':parseFloat(val)||'';
+  save();
+}
+
+function toggleSet(ei,si){
+  if(!S.active)return;
+  const s=S.active.exercises[ei].sets[si];
+  s.done=!s.done;
+  save();
+  if(s.done)startTimer(S.active.exercises[ei].restSec||120);
+  renderWorkout();
+}
+
+function addSet(ei){
+  if(!S.active)return;
+  const sets=S.active.exercises[ei].sets;
+  const last=sets[sets.length-1]||{weight:'',reps:'',rpe:'',done:false};
+  sets.push({weight:last.weight,reps:last.reps,rpe:'',done:false});
+  save();renderWorkout();
+}
+
+function delSet(ei){
+  if(!S.active)return;
+  const sets=S.active.exercises[ei].sets;
+  if(sets.length>1)sets.pop();
+  save();renderWorkout();
+}
+
+function showAbandon(){
+  showConfirm('Abandonner la séance?','Elle ne sera PAS sauvegardée dans ton historique.',()=>{
+    S.active=null;save();stopTimer();stopChrono();
+    nav('home');
+  },'Abandonner','Continuer');
+}
+
+function finishWorkout(){
+  if(!S.active)return;
+  const aw=S.active;
+  let vol=0;
+  aw.exercises.forEach(ex=>{
+    ex.sets.filter(s=>s.done&&s.weight&&s.reps).forEach(s=>{vol+=(parseFloat(s.weight)||0)*(parseInt(s.reps)||0);});
+  });
+  const session={
+    id:uid(),week:aw.week,dayName:aw.dayName,
+    date:Date.now(),duration:Date.now()-aw.startTime,
+    exercises:aw.exercises,volume:vol
+  };
+  S.history.unshift(session);
+
+  // Advance program state
+  S.programState.daysCompleted++;
+  if(S.programState.daysCompleted%4===0){
+    // Completed a full cycle of 4 days = advance week
+    S.programState.week++;
+    if(S.programState.week>12){
+      S.programState.week=1;
+      S.programState.cycleCount++;
+    }
+  }
+
+  S.active=null;
+  stopTimer();stopChrono();
+  save();
+
+  showDebriefPrompt(session);
+}
+
+// ═══════════════════════════════════════
+// LAST PERFORMANCE LOOKUP
+// ═══════════════════════════════════════
+function getLastPerf(exName){
+  for(const session of S.history){
+    const ex=session.exercises?.find(e=>e.name===exName);
+    if(ex){
+      const doneSets=ex.sets.filter(s=>s.done&&s.weight&&s.reps);
+      if(doneSets.length>0){
+        const best=doneSets.reduce((b,s)=>(parseFloat(s.weight)||0)*(parseInt(s.reps)||0)>(parseFloat(b.weight)||0)*(parseInt(b.reps)||0)?s:b);
+        return{weight:best.weight,reps:best.reps,date:session.date};
+      }
+    }
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════
+// PROGRESS SCREEN
+// ═══════════════════════════════════════
+function renderProgress(){
+  const scr=document.getElementById('screen');
+  document.getElementById('topbar-right').innerHTML='';
+
+  // Weekly volumes (8 weeks)
+  const weeks=[];
+  for(let w=7;w>=0;w--){
+    const s=Date.now()-(w+1)*7*86400000,e=Date.now()-w*7*86400000;
+    const vol=S.history.filter(h=>h.date>=s&&h.date<e).reduce((a,h)=>a+(h.volume||0),0);
+    weeks.push({lbl:w===0?'Sem.':'S-'+w,vol});
+  }
+  const maxVol=Math.max(...weeks.map(w=>w.vol),1);
+  const barsHtml=weeks.map(w=>{
+    const h=Math.max(4,Math.round((w.vol/maxVol)*60));
+    return `<div class="mbar-wrap"><div class="mbar" style="height:${h}px" title="${fmtLbs(w.vol)} lbs"></div><div class="mbar-lbl">${w.lbl}</div></div>`;
+  }).join('');
+
+  // PRs
+  const prs=buildPRs();
+
+  // Exercise frequency
+  const freq={};
+  S.history.forEach(h=>(h.exercises||[]).forEach(e=>{freq[e.name]=(freq[e.name]||0)+1;}));
+  const topEx=Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Volume comparison last 2 sessions
+  let volComp='';
+  if(S.history.length>=2){
+    const diff=S.history[0].volume-S.history[1].volume;
+    const pct=S.history[1].volume>0?Math.round(diff/S.history[1].volume*100):0;
+    volComp=`<span style="color:${diff>=0?'var(--accent)':'var(--accent2)'};font-size:12px;margin-left:8px">${diff>=0?'+':''}${pct}% vs précédente</span>`;
+  }
+
+  scr.innerHTML=`
+    <div class="sec-hdr"><h2>VOLUME HEBDOMADAIRE</h2></div>
+    <div class="card">
+      <div class="card-title">LBS SOULEVÉS / SEMAINE</div>
+      <div class="mini-bars">${barsHtml}</div>
+    </div>
+
+    <div class="sec-hdr"><h2>DERNIÈRE SÉANCE</h2></div>
+    ${S.history.length>0?`
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:700">${S.history[0].dayName}</div>
+          <div style="font-size:11px;color:var(--text3)">${formatDate(S.history[0].date)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--accent)">${fmtLbs(S.history[0].volume)} lbs</div>
+          ${volComp}
+        </div>
+      </div>
+    </div>`:'<div style="padding:0 14px;color:var(--text3);font-size:13px">Aucune séance complétée.</div>'}
+
+    <div class="sec-hdr"><h2>ÉVOLUTION PAR EXERCICE</h2></div>
+    <div class="card">
+      <div class="form-group" style="margin-bottom:8px">
+        <select id="ex-chart-select" onchange="renderExChart()" style="font-size:13px;padding:8px 10px">
+          <option value="">— Choisir un exercice —</option>
+          ${[...new Set(S.history.flatMap(h=>(h.exercises||[]).map(e=>e.name)))].map(n=>`<option value="${n}">${n}</option>`).join('')}
+        </select>
+      </div>
+      <div id="ex-chart-area" style="min-height:60px;display:flex;align-items:center;justify-content:center">
+        <span style="font-size:12px;color:var(--text3)">Sélectionne un exercice pour voir sa progression</span>
+      </div>
+    </div>
+
+    <div class="sec-hdr"><h2>CONSISTANCE</h2></div>
+    <div class="card">
+      <div class="card-title">90 DERNIERS JOURS</div>
+      <div id="heatmap" style="display:flex;flex-wrap:wrap;gap:3px">${buildHeatmap()}</div>
+    </div>
+
+    <div class="sec-hdr"><h2>RECORDS PERSONNELS</h2><button class="btn btn-ghost btn-sm" onclick="showExerciseHistory()">Par exercice</button></div>
+    ${prs.length===0?'<div style="padding:0 14px;color:var(--text3);font-size:13px">Complète des séances pour voir tes PRs.</div>':
+      prs.slice(0,8).map(pr=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-size:13px;font-weight:600">${pr.name}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:1px">${formatDate(pr.date)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--accent2)">${pr.weight} lbs × ${pr.reps}</div>
+            <div style="font-size:10px;color:var(--text3)">1RM est. ${est1RM(pr.weight,pr.reps)} lbs</div>
+          </div>
+        </div>`).join('')}
+
+    <div class="sec-hdr mt8"><h2>EXERCICES FRÉQUENTS</h2></div>
+    ${topEx.map(([name,count])=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:500">${name}</div>
+        <span class="tag tag-accent">${count}×</span>
+      </div>`).join('')}
+    <div style="height:20px"></div>`;
+}
+
+function renderExChart(){
+  const name=document.getElementById('ex-chart-select')?.value;
+  const area=document.getElementById('ex-chart-area');
+  if(!area)return;
+  if(!name){area.innerHTML='<span style="font-size:12px;color:var(--text3)">Sélectionne un exercice</span>';return;}
+
+  // Gather data points: best weight per session for this exercise
+  const points=[];
+  S.history.slice().reverse().forEach(h=>{
+    const ex=h.exercises?.find(e=>e.name===name);
+    if(ex){
+      const done=ex.sets.filter(s=>s.done&&s.weight&&s.reps);
+      if(done.length>0){
+        const best=done.reduce((b,s)=>parseFloat(s.weight)>parseFloat(b.weight)?s:b);
+        points.push({date:h.date,weight:parseFloat(best.weight),reps:parseInt(best.reps)});
+      }
+    }
+  });
+
+  if(points.length===0){area.innerHTML='<span style="font-size:12px;color:var(--text3)">Aucune donnée pour cet exercice</span>';return;}
+  if(points.length===1){area.innerHTML=`<div style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--accent)">${points[0].weight} lbs</div><div style="font-size:11px;color:var(--text3)">1 séance enregistrée</div></div>`;return;}
+
+  const maxW=Math.max(...points.map(p=>p.weight));
+  const minW=Math.min(...points.map(p=>p.weight));
+  const range=maxW-minW||1;
+  const W=280,H=60,pad=4;
+
+  const pts=points.map((p,i)=>{
+    const x=pad+(i/(points.length-1))*(W-pad*2);
+    const y=H-pad-(((p.weight-minW)/range)*(H-pad*2));
+    return{x,y,weight:p.weight,reps:p.reps,date:p.date};
+  });
+
+  const path='M'+pts.map(p=>`${p.x},${p.y}`).join(' L');
+  const area2='M'+pts[0].x+','+H+' L'+pts.map(p=>`${p.x},${p.y}`).join(' L')+` L${pts[pts.length-1].x},${H} Z`;
+
+  area.innerHTML=`
+    <div style="width:100%;overflow:hidden">
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px">
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c8ff00" stop-opacity=".3"/><stop offset="100%" stop-color="#c8ff00" stop-opacity="0"/></linearGradient></defs>
+        <path d="${area2}" fill="url(#lg)"/>
+        <path d="${path}" fill="none" stroke="#c8ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        ${pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#c8ff00"/>`).join('')}
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:4px">
+        <span>${formatDate(points[0].date)}</span>
+        <span style="color:var(--accent);font-weight:700">${points[points.length-1].weight} lbs × ${points[points.length-1].reps} reps</span>
+        <span>${formatDate(points[points.length-1].date)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-top:6px">
+        <div style="color:var(--text3)">Min: <span style="color:var(--text)">${minW} lbs</span></div>
+        <div style="color:var(--text3)">Max: <span style="color:var(--accent2)">${maxW} lbs</span></div>
+        <div style="color:var(--text3)">1RM est.: <span style="color:var(--accent3)">${est1RM(points[points.length-1].weight,points[points.length-1].reps)} lbs</span></div>
+      </div>
+    </div>`;
+}
+
+function buildHeatmap(){
+  const sessionDays=new Set(S.history.map(h=>{const d=new Date(h.date);d.setHours(0,0,0,0);return d.getTime();}));
+  const today=new Date();today.setHours(0,0,0,0);
+  let html='';
+  for(let d=89;d>=0;d--){
+    const day=new Date(today);day.setDate(day.getDate()-d);
+    const ts=day.getTime();
+    const has=sessionDays.has(ts);
+    const title=formatDate(ts);
+    html+=`<div title="${title}" style="width:10px;height:10px;border-radius:2px;background:${has?'var(--accent)':'var(--bg3)'};opacity:${has?'.9':'.4'};border:1px solid ${has?'rgba(200,255,0,.3)':'var(--border)'}"></div>`;
+  }
+  return html;
+}
+
+function buildPRs(){
+  const prs={};
+  S.history.forEach(h=>{
+    (h.exercises||[]).forEach(ex=>{
+      ex.sets.filter(s=>s.done&&s.weight&&s.reps).forEach(s=>{
+        const w=parseFloat(s.weight)||0,r=parseInt(s.reps)||0;
+        if(!prs[ex.name]||w>prs[ex.name].weight||(w===prs[ex.name].weight&&r>prs[ex.name].reps))
+          prs[ex.name]={name:ex.name,weight:w,reps:r,date:h.date};
+      });
+    });
+  });
+  return Object.values(prs).sort((a,b)=>b.date-a.date);
+}
+
+function est1RM(w,r){return Math.round(parseFloat(w)*(1+parseInt(r)/30));}
+
+function showExerciseHistory(){
+  const exNames=[...new Set(S.history.flatMap(h=>(h.exercises||[]).map(e=>e.name)))];
+  showModal(`
+    <div class="modal-handle"></div>
+    <div class="modal-title">HISTORIQUE PAR EXERCICE</div>
+    ${exNames.map(name=>{
+      const perf=[];
+      S.history.forEach(h=>{
+        const ex=h.exercises?.find(e=>e.name===name);
+        if(ex){
+          const done=ex.sets.filter(s=>s.done&&s.weight&&s.reps);
+          if(done.length>0){
+            const best=done.reduce((b,s)=>parseFloat(s.weight)>parseFloat(b.weight)?s:b);
+            perf.push({date:h.date,weight:best.weight,reps:best.reps,rpe:best.rpe});
+          }
+        }
+      });
+      if(perf.length===0)return '';
+      return `<div style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--accent3);margin-bottom:5px">${name}</div>
+        ${perf.slice(0,4).map(p=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--text3)">${formatDate(p.date)}</span>
+          <span><b>${p.weight} lbs × ${p.reps}</b>${p.rpe?` · RPE ${p.rpe}`:''}</span>
+        </div>`).join('')}
+      </div>`;
+    }).filter(Boolean).join('')||'<div style="color:var(--text3)">Aucune donnée</div>'}
+  `);
+}
+
+// ═══════════════════════════════════════
+// COACH IA
+// ═══════════════════════════════════════
+function renderCoach(){
+  const scr=document.getElementById('screen');
+  document.getElementById('topbar-right').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="clearChat()">Effacer</button>`;
+
+  const msgs=S.chatHistory.length===0?`
+    <div style="padding:20px 14px;text-align:center">
+      <div style="font-size:36px;margin-bottom:10px">🤖</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6">Ton coach IA a accès à tout ton historique d'entraînement.<br>Pose-lui n'importe quelle question sur ta progression.</div>
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:6px">
+        ${['Comment évolue mon volume?','Quels exercices devrais-je améliorer?','Suis-je prêt pour la semaine prochaine?'].map(q=>`<button class="btn btn-ghost btn-sm" onclick="sendCoachMsg('${q}')">${q}</button>`).join('')}
+      </div>
+    </div>`
+    :S.chatHistory.map(m=>`<div class="chat-msg ${m.role}">${m.content}</div>`).join('');
+
+  scr.style.paddingBottom='0';
+  scr.innerHTML=`
+    <div class="chat-wrap" id="chat-messages" style="padding-top:10px;padding-bottom:80px">${msgs}</div>
+    <div class="chat-input-wrap" style="position:fixed;bottom:calc(60px + var(--safe-bot));left:50%;transform:translateX(-50%);width:100%;max-width:480px;padding:10px 14px;background:var(--bg);border-top:1px solid var(--border);display:flex;gap:8px;z-index:50">
+      <input class="chat-input" id="coach-input" type="text" placeholder="Message au coach..." onkeydown="if(event.key==='Enter')sendCoachInput()">
+      <button class="btn btn-primary btn-sm" onclick="sendCoachInput()">➤</button>
+    </div>`;
+
+  setTimeout(()=>{const el=document.getElementById('chat-messages');if(el)el.scrollTop=el.scrollHeight;},100);
+}
+
+function sendCoachInput(){
+  const inp=document.getElementById('coach-input');
+  if(!inp)return;
+  const msg=inp.value.trim();
+  if(!msg)return;
+  inp.value='';
+  sendCoachMsg(msg);
+}
+
+async function sendCoachMsg(userMsg){
+  S.chatHistory.push({role:'user',content:userMsg});
+  save();
+  renderCoach();
+
+  if(!S.apiKey){
+    S.chatHistory.push({role:'coach',content:'⚠️ Clé API manquante. Va dans Réglages → Clé API Claude pour la configurer.'});
+    save();renderCoach();return;
+  }
+
+  // Build context
+  const ps=S.programState;
+  const recentSessions=S.history.slice(0,5).map(h=>`- ${h.dayName} (Sem.${h.week}): ${fmtLbs(h.volume)} lbs, ${formatDate(h.date)}`).join('\n');
+  const prs=buildPRs().slice(0,5).map(p=>`- ${p.name}: ${p.weight} lbs × ${p.reps}`).join('\n');
+
+  const systemPrompt=`Tu es le coach IA de FORGE, une app de musculation. Tu t'adresses à ${S.profile?.name||'l\'athlète'} en français.
+Profil: ${S.profile?.level||'intermédiaire'}, objectif ${S.profile?.goal||'hypertrophie'}, ${S.profile?.age||'?'} ans, ${S.profile?.weight||'?'} lbs.
+Programme: Semaine ${ps.week}/12, Cycle ${ps.cycleCount+1}, Jour ${(ps.daysCompleted%4)+1}/4.
+Séances récentes:\n${recentSessions||'Aucune encore.'}
+Records personnels:\n${prs||'Aucun encore.'}
+Total séances: ${S.history.length}.
+Réponds en français, utilise des lbs, dis "séries" et "répétitions". Sois précis, motivant, et concis (150 mots max).`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-5',
+        max_tokens:400,
+        system:systemPrompt,
+        messages:S.chatHistory.map(m=>({role:m.role==='coach'?'assistant':'user',content:m.content}))
+      })
+    });
+    const data=await resp.json();
+    if(data.error){
+      S.chatHistory.push({role:'coach',content:`❌ Erreur API: ${data.error.message}`});
+    }else{
+      const reply=data.content?.[0]?.text||'Désolé, erreur de connexion.';
+      S.chatHistory.push({role:'coach',content:reply});
+    }
+    save();renderCoach();
+  }catch(e){
+    S.chatHistory.push({role:'coach',content:'Erreur de connexion. Vérifie ta connexion internet.'});
+    save();renderCoach();
+  }
+}
+
+function clearChat(){
+  S.chatHistory=[];save();renderCoach();
+}
+
+// ═══════════════════════════════════════
+// COACH DURING WORKOUT
+// ═══════════════════════════════════════
+function showCoachDuring(){
+  const aw=S.active;
+  if(!aw)return;
+  const ctx=aw.exercises.map(ex=>{
+    const done=ex.sets.filter(s=>s.done);
+    return `${ex.name}: ${done.length}/${ex.sets.length} séries`;
+  }).join(', ');
+  showModal(`
+    <div class="modal-handle"></div>
+    <div class="modal-title">🤖 Coach IA</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${['J\'ai une douleur, quelle alternative?','Est-ce que je devrais augmenter le poids?','Comment améliorer ma technique?'].map(q=>`
+        <button class="btn btn-secondary btn-full" onclick="closeModal();askCoachDuring('${q}','${ctx}')">${q}</button>`).join('')}
+      <div class="row mt8">
+        <input type="text" id="coach-during-input" placeholder="Question personnalisée..." style="flex:1">
+        <button class="btn btn-primary" onclick="const v=document.getElementById('coach-during-input').value.trim();if(v){closeModal();askCoachDuring(v,'${ctx}');}">→</button>
+      </div>
+    </div>`);
+}
+
+async function askCoachDuring(q,ctx){
+  nav('coach');
+  await sendCoachMsg(`[En séance: ${ctx}] ${q}`);
+}
+
+// ═══════════════════════════════════════
+// COACH BRIEFING / DEBRIEFING
+// ═══════════════════════════════════════
+function showBriefingPrompt(week,day){
+  showModal(`
+    <div class="modal-handle"></div>
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-size:32px;margin-bottom:8px">🤖</div>
+      <div style="font-weight:700;font-size:16px">Briefing du Coach</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:6px">Obtenir des conseils personnalisés pour cette séance?</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+      <button class="btn btn-secondary" onclick="closeModal()">Non merci</button>
+      <button class="btn btn-primary" onclick="closeModal();getBriefing(${week},'${day}')">🤖 Briefing</button>
+    </div>`);
+}
+
+async function getBriefing(week,day){
+  nav('coach');
+  await sendCoachMsg(`Donne-moi un briefing pour ma séance ${day} de la semaine ${week}. Dis-moi ce sur quoi me concentrer aujourd'hui.`);
+}
+
+function showDebriefPrompt(session){
+  showModal(`
+    <div class="modal-handle"></div>
+    <div style="text-align:center;padding:6px 0 12px">
+      <div style="font-size:36px">🏁</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1.5px;margin-top:6px">SÉANCE TERMINÉE!</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:4px">${session.dayName} · ${formatDur(session.duration)} · ${fmtLbs(session.volume)} lbs</div>
+    </div>
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat-box"><div class="stat-val">${(session.exercises||[]).length}</div><div class="stat-lbl">Exercices</div></div>
+      <div class="stat-box"><div class="stat-val">${(session.exercises||[]).reduce((a,e)=>a+e.sets.filter(s=>s.done).length,0)}</div><div class="stat-lbl">Séries</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-secondary" onclick="closeModal();nav('home')">Accueil</button>
+      <button class="btn btn-primary" onclick="closeModal();getDebrief('${session.id}')">🤖 Debriefing</button>
+    </div>`);
+}
+
+async function getDebrief(sessionId){
+  const session=S.history.find(h=>h.id===sessionId);
+  if(!session)return;
+  nav('coach');
+  const summary=session.exercises.map(ex=>{
+    const done=ex.sets.filter(s=>s.done);
+    const avgRpe=done.filter(s=>s.rpe).reduce((a,s)=>a+s.rpe,0)/(done.filter(s=>s.rpe).length||1);
+    return `${ex.name}: ${done.length} séries, meilleur set ${done[0]?.weight||'?'} lbs × ${done[0]?.reps||'?'} reps${avgRpe?`, RPE moy ${avgRpe.toFixed(1)}`:''}`;
+  }).join('; ');
+  await sendCoachMsg(`Voici mon debriefing pour ${session.dayName} (${fmtLbs(session.volume)} lbs en ${formatDur(session.duration)}): ${summary}. Analyse ma performance et donne-moi tes recommandations.`);
+}
+
+// ═══════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════
+function renderSettings(){
+  const scr=document.getElementById('screen');
+  document.getElementById('topbar-right').innerHTML='';
+  const p=S.profile||{};
+  const size=(JSON.stringify({history:S.history}).length/1024).toFixed(1);
+
+  scr.innerHTML=`
+    <div style="padding:16px 14px 0">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--accent);letter-spacing:3px">FORGE</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">Programme 12 semaines · v2.0</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:8px">
+          ${p.name?`👤 ${p.name} · `:''}${S.history.length} séances · ${size} KB
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-hdr mt8"><h2>COACH IA</h2></div>
+    <div class="settings-row" onclick="showApiKeyModal()">
+      <div><div class="settings-title">🔑 Clé API Claude</div><div class="settings-sub">${S.apiKey?'✅ Configurée — Coach IA actif':'⚠️ Non configurée — Coach IA inactif'}</div></div>
+      <span style="color:var(--text3)">›</span>
+    </div>
+
+    <div class="sec-hdr mt8"><h2>PROFIL</h2></div>
+    <div class="settings-row" onclick="editProfile()">
+      <div><div class="settings-title">👤 ${p.name||'Configurer profil'}</div><div class="settings-sub">${p.level||''} · ${p.goal||''} · ${p.weight||'?'} lbs</div></div>
+      <span style="color:var(--text3)">›</span>
+    </div>
+
+    <div class="sec-hdr mt8"><h2>PROGRAMME</h2></div>
+    <div class="settings-row" onclick="showProgramReset()">
+      <div><div class="settings-title">📅 Progression</div><div class="settings-sub">Sem. ${S.programState.week}/12 · Cycle ${S.programState.cycleCount+1} · Jour ${(S.programState.daysCompleted%4)+1}/4</div></div>
+      <span style="color:var(--text3)">›</span>
+    </div>
+
+    <div class="sec-hdr mt8"><h2>SAUVEGARDE</h2></div>
+    <div class="settings-row" onclick="exportData()">
+      <div><div class="settings-title">📤 Exporter les données</div><div class="settings-sub">Télécharger un fichier JSON de sauvegarde</div></div>
+      <span style="color:var(--text3)">›</span>
+    </div>
+    <div class="settings-row" onclick="importData()">
+      <div><div class="settings-title">📥 Importer des données</div><div class="settings-sub">Restaurer depuis un fichier JSON</div></div>
+      <span style="color:var(--text3)">›</span>
+    </div>
+
+    <div class="sec-hdr mt8"><h2>HISTORIQUE</h2></div>
+    ${S.history.slice(0,3).map(h=>`
+      <div class="hist-item" onclick="showSessionDetail('${h.id}')">
+        <div class="hist-date">${formatDate(h.date)}</div>
+        <div class="hist-name">${h.dayName} — Sem. ${h.week}</div>
+        <div class="hist-stats">
+          <div class="hist-stat">⏱ <span>${formatDur(h.duration)}</span></div>
+          <div class="hist-stat">💪 <span>${fmtLbs(h.volume)} lbs</span></div>
+        </div>
+      </div>`).join('')}
+    ${S.history.length>3?`<div style="padding:6px 14px"><button class="btn btn-ghost btn-full btn-sm" onclick="showAllHistory()">Voir tout l'historique (${S.history.length})</button></div>`:''}
+
+    <div class="sec-hdr mt8"><h2>DANGER</h2></div>
+    <div style="padding:0 14px 30px">
+      <button class="btn btn-danger btn-full" onclick="resetAll()">🗑 Effacer toutes les données</button>
+    </div>`;
+}
+
+function showProgramReset(){
+  showModal(`
+    <div class="modal-handle"></div>
+    <div class="modal-title">PROGRESSION DU PROGRAMME</div>
+    <div style="margin-bottom:14px">
+      <div class="form-group"><label class="label">SEMAINE ACTUELLE (1-12)</label>
+        <input type="number" id="prog-week" value="${S.programState.week}" min="1" max="12" inputmode="numeric">
+      </div>
+      <div class="form-group"><label class="label">JOUR SUIVANT (0-3)</label>
+        <select id="prog-day">
+          ${DAYS_ORDER.map((d,i)=>`<option value="${i}" ${S.programState.daysCompleted%4===i?'selected':''}>${i+1}. ${d}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveProgramState()">Enregistrer</button>
+    </div>`);
+}
+
+function saveProgramState(){
+  const week=parseInt(document.getElementById('prog-week').value)||1;
+  const dayIdx=parseInt(document.getElementById('prog-day').value)||0;
+  S.programState.week=Math.min(12,Math.max(1,week));
+  S.programState.daysCompleted=Math.floor(S.programState.daysCompleted/4)*4+dayIdx;
+  save();closeModal();renderSettings();
+}
+
+function editProfile(){
+  const p=S.profile||{};
+  showModal(`
+    <div class="modal-handle"></div>
+    <div class="modal-title">MODIFIER PROFIL</div>
+    <div class="form-group"><label class="label">PRÉNOM</label><input type="text" id="ep-name" value="${p.name||''}"></div>
+    <div class="form-group"><label class="label">OBJECTIF</label>
+      <select id="ep-goal">
+        ${[['hypertrophie','Hypertrophie'],['force','Force'],['athletisme','Performance'],['perte_gras','Perte de gras']].map(([v,l])=>`<option value="${v}" ${p.goal===v?'selected':''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group"><label class="label">NIVEAU</label>
+      <select id="ep-level">
+        ${[['debutant','Débutant'],['intermediaire','Intermédiaire'],['avance','Avancé']].map(([v,l])=>`<option value="${v}" ${p.level===v?'selected':''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    <div class="row">
+      <div class="form-group flex1"><label class="label">ÂGE</label><input type="number" id="ep-age" value="${p.age||''}" inputmode="numeric"></div>
+      <div class="form-group flex1"><label class="label">POIDS (lbs)</label><input type="number" id="ep-weight" value="${p.weight||''}" inputmode="decimal"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveEditProfile()">Enregistrer</button>
+    </div>`);
+}
+
+function saveEditProfile(){
+  S.profile={...S.profile,
+    name:document.getElementById('ep-name').value.trim()||S.profile?.name,
+    goal:document.getElementById('ep-goal').value,
+    level:document.getElementById('ep-level').value,
+    age:parseInt(document.getElementById('ep-age').value)||null,
+    weight:parseFloat(document.getElementById('ep-weight').value)||null
+  };
+  save();closeModal();renderSettings();
+}
+
+function showAllHistory(){
+  showModal(`
+    <div class="modal-handle"></div>
+    <div class="modal-title">HISTORIQUE COMPLET</div>
+    ${S.history.map(h=>`
+      <div class="hist-item" style="margin:6px 0" onclick="showSessionDetail('${h.id}')">
+        <div class="hist-date">${formatDate(h.date)}</div>
+        <div class="hist-name">${h.dayName} — Sem. ${h.week}</div>
+        <div class="hist-stats">
+          <div class="hist-stat">⏱ <span>${formatDur(h.duration)}</span></div>
+          <div class="hist-stat">💪 <span>${fmtLbs(h.volume)} lbs</span></div>
+        </div>
+      </div>`).join('')}`);
+}
+
+function showSessionDetail(id){
+  const h=S.history.find(s=>s.id===id);
+  if(!h)return;
+  showModal(`
+    <div class="modal-handle"></div>
+    <div class="modal-title">${h.dayName} — Sem. ${h.week}</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">${formatDate(h.date)} · ${formatDur(h.duration)}</div>
+    <div class="stat-grid" style="margin-bottom:14px">
+      <div class="stat-box"><div class="stat-val">${fmtLbs(h.volume)}</div><div class="stat-lbl">Volume (lbs)</div></div>
+      <div class="stat-box"><div class="stat-val">${(h.exercises||[]).length}</div><div class="stat-lbl">Exercices</div></div>
+    </div>
+    ${(h.exercises||[]).map(ex=>{
+      const done=ex.sets.filter(s=>s.done&&s.weight&&s.reps);
+      if(done.length===0)return '';
+      return `<div style="padding:9px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:600;color:var(--accent3)">${ex.name}</div>
+        ${done.map((s,i)=>`<div style="font-size:12px;color:var(--text2);margin-top:3px">Série ${i+1}: ${s.weight} lbs × ${s.reps} reps${s.rpe?` · RPE ${s.rpe}`:''}</div>`).join('')}
+      </div>`;
+    }).join('')}
+    <div style="margin-top:14px">
+      <button class="btn btn-danger btn-full" onclick="delSession('${h.id}');closeModal()">🗑 Supprimer</button>
+    </div>`);
+}
+
+function delSession(id){
+  S.history=S.history.filter(h=>h.id!==id);
+  save();renderSettings();
+}
+
+function exportData(){
+  const data={version:2,exportDate:new Date().toISOString(),profile:S.profile,history:S.history,programState:S.programState};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`forge-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();URL.revokeObjectURL(url);
+}
+
+function importData(){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='.json,application/json';
+  inp.onchange=e=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const d=JSON.parse(ev.target.result);
+        if(!d.history&&!d.profile)throw new Error('Format invalide');
+        if(!confirm(`Importer ${d.history?.length||0} séances?\nCela remplacera tes données actuelles.`))return;
+        if(d.profile)S.profile=d.profile;
+        if(d.history)S.history=d.history;
+        if(d.programState)S.programState=d.programState;
+        S.active=null;save();
+        alert('✅ Importation réussie!');renderSettings();
+      }catch(err){alert('❌ Fichier invalide: '+err.message);}
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+}
+
+function showApiKeyModal(){
+  showModal(`
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔑 CLÉ API CLAUDE</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+      Obtiens ta clé sur <b style="color:var(--accent3)">console.anthropic.com</b><br>
+      API Keys → Create Key<br>
+      Elle commence par <b>sk-ant-...</b><br><br>
+      La clé est sauvegardée uniquement sur ton téléphone.
+    </div>
+    <div class="form-group">
+      <label class="label">CLÉ API</label>
+      <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." value="${S.apiKey||''}" style="font-family:'JetBrains Mono',monospace;font-size:12px">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('api-key-input').type=document.getElementById('api-key-input').type==='password'?'text':'password'">👁 Afficher</button>
+      ${S.apiKey?`<button class="btn btn-danger btn-sm" onclick="S.apiKey='';save();closeModal();renderSettings()">Supprimer</button>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+      <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveApiKey()">Enregistrer</button>
+    </div>`);
+}
+
+function saveApiKey(){
+  const key=document.getElementById('api-key-input').value.trim();
+  if(key&&!key.startsWith('sk-ant-')){
+    alert('La clé doit commencer par sk-ant-...');return;
+  }
+  S.apiKey=key;
+  save();closeModal();renderSettings();
+}
+
+function resetAll(){
+  showConfirm('Effacer TOUTES les données?','Cette action est irréversible.',()=>{
+    S={profile:null,history:[],active:null,programState:{week:1,daysCompleted:0,cycleCount:0},currentNav:'home',chatHistory:[],apiKey:''};
+    save();stopTimer();stopChrono();
+    document.getElementById('bnav').style.display='none';
+    renderSetup();
+  },'Effacer tout','Annuler');
+}
+
+// ═══════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════
+function showModal(html){
+  document.getElementById('modal-root').innerHTML=`
+    <div class="modal-overlay" onclick="handleOverlay(event)">
+      <div class="modal" onclick="event.stopPropagation()">${html}</div>
+    </div>`;
+}
+function handleOverlay(e){if(e.target.classList.contains('modal-overlay'))closeModal();}
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+
+function showConfirm(title,msg,onConfirm,confirmLabel='Confirmer',cancelLabel='Annuler'){
+  showModal(`
+    <div class="modal-handle"></div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:8px">${title}</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:18px">${msg}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-secondary" onclick="closeModal()">${cancelLabel}</button>
+      <button class="btn btn-danger" onclick="closeModal();(${onConfirm.toString()})()">${confirmLabel}</button>
+    </div>`);
+}
+
+// ═══════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════
+function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36);}
+function formatDur(ms){
+  if(!ms||ms<0)return'0m0s';
+  const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60);
+  return h>0?`${h}h${(m%60).toString().padStart(2,'0')}m`:`${m}m${(s%60).toString().padStart(2,'0')}s`;
+}
+function formatDate(ts){
+  const d=new Date(ts);
+  const days=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+  const months=['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+  return`${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+function fmtLbs(v){if(!v)return'0';if(v>=1000)return(v/1000).toFixed(1)+'k';return Math.round(v).toString();}
+function fmtAgo(ts){
+  const d=Math.floor((Date.now()-ts)/86400000);
+  if(d===0)return"aujourd'hui";if(d===1)return"hier";return`il y a ${d} jours`;
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+if(!S.profile){
+  renderSetup();
+}else{
+  nav('home');
+}
+</script>
+</body>
+</html>
