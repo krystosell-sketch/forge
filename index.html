@@ -274,7 +274,8 @@ async function supaGet(table, id){
 }
 
 async function syncToCloud(){
-  await supaUpsert('profiles',{id:USER_ID, data:{profile:S.profile,programState:S.programState,apiKey:S.apiKey,chatHistory:S.chatHistory}, updated_at:new Date().toISOString()});
+  // Note: apiKey excluded from cloud sync intentionally (security)
+  await supaUpsert('profiles',{id:USER_ID, data:{profile:S.profile,programState:S.programState,chatHistory:S.chatHistory}, updated_at:new Date().toISOString()});
   await supaUpsert('program_state',{id:USER_ID, data:S.programState, updated_at:new Date().toISOString()});
 }
 
@@ -289,7 +290,7 @@ async function loadFromCloud(){
     if(prof?.data){
       if(prof.data.profile) S.profile = prof.data.profile;
       if(prof.data.programState) S.programState = prof.data.programState;
-      if(prof.data.apiKey) S.apiKey = prof.data.apiKey;
+      // apiKey intentionally excluded from cloud - stays local only
       if(prof.data.chatHistory) S.chatHistory = prof.data.chatHistory;
     }
     // Load sessions
