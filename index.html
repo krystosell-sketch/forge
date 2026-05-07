@@ -1248,6 +1248,99 @@ function renderProgramTab(){
     buildCalendar(window._calOffset||0);
 }
 
+function buildHeatmap(){
+  var sessionDays=new Set(S.history.map(function(h){var d=new Date(h.date);d.setHours(0,0,0,0);return d.getTime();}));
+  var today=new Date();today.setHours(0,0,0,0);
+  var html='';
+  for(var d=89;d>=0;d--){
+    var day=new Date(today);day.setDate(day.getDate()-d);
+    var ts=day.getTime();
+    var has=sessionDays.has(ts);
+    html+='<div style="width:10px;height:10px;border-radius:2px;background:'+(has?'var(--accent)':'var(--bg3)')+';opacity:'+(has?'.9':'.4')+';border:1px solid '+(has?'rgba(200,255,0,.3)':'var(--border)')+'"></div>';
+  }
+  return html;
+}
+
+function buildPRs(){
+  var prs={};
+  S.history.forEach(function(h){
+    (h.exercises||[]).forEach(function(ex){
+      ex.sets.filter(function(s){return s.done&&s.weight&&s.reps&&!s.flag;}).forEach(function(s){
+        var w=parseFloat(s.weight)||0,r=parseInt(s.reps)||0;
+        if(!prs[ex.name]||w>prs[ex.name].weight||(w===prs[ex.name].weight&&r>prs[ex.name].reps))
+          prs[ex.name]={name:ex.name,weight:w,reps:r,date:h.date};
+      });
+    });
+  });
+  return Object.values(prs).sort(function(a,b){return b.date-a.date;});
+}
+
+function est1RM(w,r){return Math.round(parseFloat(w)*(1+parseInt(r)/30));}
+
+function renderExChart(){
+  var name=document.getElementById('ex-chart-select');
+  if(!name) return;
+  name=name.value;
+  var area=document.getElementById('ex-chart-area');
+  if(!area)return;
+  if(!name){area.innerHTML='<span style="font-size:12px;color:var(--text3)">Sélectionne un exercice</span>';return;}
+  var points=[];
+  S.history.slice().reverse().forEach(function(h){
+    var ex=(h.exercises||[]).find(function(e){return e.name===name;});
+    if(ex){
+      var done=ex.sets.filter(function(s){return s.done&&s.weight&&s.reps&&!s.flag;});
+      if(done.length>0){
+        var best=done.reduce(function(b,s){return parseFloat(s.weight)*parseInt(s.reps)>parseFloat(b.weight)*parseInt(b.reps)?s:b;});
+        points.push({date:h.date,weight:parseFloat(best.weight),reps:parseInt(best.reps)});
+      }
+    }
+  });
+  if(points.length===0){area.innerHTML='<span style="font-size:12px;color:var(--text3)">Aucune donnée pour cet exercice</span>';return;}
+  if(points.length===1){area.innerHTML='<div style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--accent)">'+points[0].weight+' lbs</div><div style="font-size:11px;color:var(--text3)">1 séance enregistrée</div></div>';return;}
+  var maxW=Math.max.apply(null,points.map(function(p){return p.weight;}));
+  var minW=Math.min.apply(null,points.map(function(p){return p.weight;}));
+  var range=maxW-minW||1;
+  var W=280,H=60,pad=4;
+  var pts=points.map(function(p,i){
+    return {x:pad+(i/(points.length-1))*(W-pad*2),y:H-pad-(((p.weight-minW)/range)*(H-pad*2)),weight:p.weight,reps:p.reps,date:p.date};
+  });
+  var path='M'+pts.map(function(p){return p.x+','+p.y;}).join(' L');
+  var area2='M'+pts[0].x+','+H+' L'+pts.map(function(p){return p.x+','+p.y;}).join(' L')+' L'+pts[pts.length-1].x+','+H+' Z';
+  area.innerHTML='<div style="width:100%;overflow:hidden">'+
+    '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px">'+
+      '<defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c8ff00" stop-opacity=".3"/><stop offset="100%" stop-color="#c8ff00" stop-opacity="0"/></linearGradient></defs>'+
+      '<path d="'+area2+'" fill="url(#lg)"/>'+
+      '<path d="'+path+'" fill="none" stroke="#c8ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
+      pts.map(function(p){return '<circle cx="'+p.x+'" cy="'+p.y+'" r="3" fill="#c8ff00"/>';}).join('')+
+    '</svg>'+
+    '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:4px">'+
+      '<span>'+formatDate(points[0].date)+'</span>'+
+      '<span style="color:var(--accent);font-weight:700">'+points[points.length-1].weight+' lbs × '+points[points.length-1].reps+' reps</span>'+
+      '<span>'+formatDate(points[points.length-1].date)+'</span>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:6px">'+
+      '<div style="color:var(--text3)">Min: <span style="color:var(--text)">'+minW+' lbs</span></div>'+
+      '<div style="color:var(--text3)">Max: <span style="color:var(--accent2)">'+maxW+' lbs</span></div>'+
+      '<div style="color:var(--text3)">1RM est.: <span style="color:var(--accent3)">'+est1RM(points[points.length-1].weight,points[points.length-1].reps)+' lbs</span></div>'+
+    '</div>'+
+  '</div>';
+}
+
+function getLastPerf(exName){
+  for(var i=0;i<S.history.length;i++){
+    var session=S.history[i];
+    var ex=(session.exercises||[]).find(function(e){return e.name===exName;});
+    if(ex){
+      var done=ex.sets.filter(function(s){return s.done&&s.weight&&s.reps;});
+      if(done.length>0){
+        var best=done.reduce(function(b,s){return parseFloat(s.weight)*parseInt(s.reps)>parseFloat(b.weight)*parseInt(b.reps)?s:b;});
+        return {weight:best.weight,reps:best.reps,date:session.date};
+      }
+    }
+  }
+  return null;
+}
+
 function calDayClick(el){
   var key=el.getAttribute('data-calkey');
   if(key&&window._calSessionMap&&window._calSessionMap[key]){
