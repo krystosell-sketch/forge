@@ -1597,21 +1597,23 @@ async function getBriefing(week,day){
 }
 
 function showDebriefPrompt(session){
-  showModal(`
-    <div class="modal-handle"></div>
-    <div style="text-align:center;padding:6px 0 12px">
-      <div style="font-size:36px">🏁</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1.5px;margin-top:6px">SÉANCE TERMINÉE!</div>
-      <div style="font-size:13px;color:var(--text2);margin-top:4px">${session.dayName} · ${formatDur(session.duration)} · ${fmtLbs(session.volume)} lbs</div>
-    </div>
-    <div class="stat-grid" style="margin-bottom:14px">
-      <div class="stat-box"><div class="stat-val">${(session.exercises||[]).length}</div><div class="stat-lbl">Exercices</div></div>
-      <div class="stat-box"><div class="stat-val">${(session.exercises||[]).reduce((a,e)=>a+e.sets.filter(s=>s.done).length,0)}</div><div class="stat-lbl">Séries</div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="btn btn-secondary" onclick="closeModal();nav('home')">Accueil</button>
-      <button class="btn btn-primary" onclick="closeModal();getDebrief('${session.id}')">🤖 Debriefing</button>
-    </div>`);
+  window._debriefSession=session;
+  showModal(
+    '<div class="modal-handle"></div>'+
+    '<div style="text-align:center;padding:6px 0 12px">'+
+      '<div style="font-size:36px">🏁</div>'+
+      '<div style="font-family:Bebas Neue,sans-serif;font-size:22px;letter-spacing:1.5px;margin-top:6px">SÉANCE TERMINÉE!</div>'+
+      '<div style="font-size:13px;color:var(--text2);margin-top:4px">'+session.dayName+' · '+formatDur(session.duration)+' · '+fmtLbs(session.volume)+' lbs</div>'+
+    '</div>'+
+    '<div class="stat-grid" style="margin-bottom:14px">'+
+      '<div class="stat-box"><div class="stat-val">'+(session.exercises||[]).length+'</div><div class="stat-lbl">Exercices</div></div>'+
+      '<div class="stat-box"><div class="stat-val">'+(session.exercises||[]).reduce(function(a,e){return a+e.sets.filter(function(s){return s.done;}).length;},0)+'</div><div class="stat-lbl">Séries</div></div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+      '<button class="btn btn-secondary" onclick="closeModal();nav(\'home\')">Accueil</button>'+
+      '<button class="btn btn-primary" onclick="getDebrief(window._debriefSession.id)">🤖 Debriefing</button>'+
+    '</div>'
+  );
 }
 
 async function getDebrief(sessionId){
