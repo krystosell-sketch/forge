@@ -487,6 +487,10 @@ function saveProfile(){
 // ═══════════════════════════════════════
 function renderHome(){
   const scr=document.getElementById('screen');
+  scr.style.paddingBottom='';
+  scr.style.overflow='';
+  scr.style.display='';
+  scr.style.flexDirection='';
   document.getElementById('topbar-right').innerHTML='';
 
   const ps=S.programState;
@@ -682,6 +686,11 @@ function initWorkout(week,day,fatigue,stress){
 // ═══════════════════════════════════════
 function renderWorkout(){
   const scr=document.getElementById('screen');
+  // Reset any styles applied by other screens (coach, etc.)
+  scr.style.paddingBottom='';
+  scr.style.overflow='';
+  scr.style.display='';
+  scr.style.flexDirection='';
   const aw=S.active;
 
   document.getElementById('topbar-right').innerHTML=aw?`
@@ -1031,6 +1040,10 @@ function getLastPerf(exName){
 // ═══════════════════════════════════════
 function renderProgress(){
   const scr=document.getElementById('screen');
+  scr.style.paddingBottom='';
+  scr.style.overflow='';
+  scr.style.display='';
+  scr.style.flexDirection='';
   document.getElementById('topbar-right').innerHTML='';
   const activeTab=window._progressTab||'volume';
   const tabs=[['volume','📊 Volume'],['prs','🏆 PRs'],['muscles','💪 Muscles'],['program','📅 Programme']];
@@ -1585,6 +1598,10 @@ async function getDebrief(sessionId){
 // ═══════════════════════════════════════
 function renderSettings(){
   const scr=document.getElementById('screen');
+  scr.style.paddingBottom='';
+  scr.style.overflow='';
+  scr.style.display='';
+  scr.style.flexDirection='';
   document.getElementById('topbar-right').innerHTML='';
   const p=S.profile||{};
   const size=(JSON.stringify({history:S.history}).length/1024).toFixed(1);
