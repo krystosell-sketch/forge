@@ -1559,8 +1559,41 @@ function showBriefingPrompt(week,day){
 }
 
 async function getBriefing(week,day){
-  nav('coach');
-  await sendCoachMsg(`Donne-moi un briefing pour ma séance ${day} de la semaine ${week}. Dis-moi ce sur quoi me concentrer aujourd&#39;hui.`);
+  // Show briefing in modal without leaving workout screen
+  showModal(
+    '<div class="modal-handle"></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
+      '<div style="font-size:28px">🤖</div>'+
+      '<div class="modal-title" style="margin-bottom:0">BRIEFING COACH</div>'+
+    '</div>'+
+    '<div id="briefing-content" style="font-size:14px;color:var(--text2);line-height:1.7;min-height:80px;display:flex;align-items:center;justify-content:center">'+
+      '<div style="text-align:center"><div style="font-size:20px;margin-bottom:8px">⏳</div>Génération du briefing...</div>'+
+    '</div>'+
+    '<div style="margin-top:16px"><button class="btn btn-secondary btn-full" onclick="closeModal()">Fermer</button></div>'
+  );
+  if(!S.apiKey){
+    var el=document.getElementById('briefing-content');
+    if(el) el.innerHTML='<div style="color:var(--accent2)">⚠️ Clé API manquante.<br>Va dans Réglages → Coach IA.</div>';
+    return;
+  }
+  var ps=S.programState;
+  var recentSessions=S.history.slice(0,3).map(function(h){return '- '+h.dayName+' (Sem.'+h.week+'): '+fmtLbs(h.volume)+' lbs';}).join(', ');
+  var systemPrompt='Tu es le coach IA de FORGE. Réponds en français, utilise des lbs, dis séries et répétitions. Sois concis (100 mots max).';
+  var userMsg='Donne-moi un briefing motivant pour ma séance '+day+' de la semaine '+week+'. Séances récentes: '+recentSessions+'. Dis-moi sur quoi me concentrer.';
+  try{
+    var resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,system:systemPrompt,messages:[{role:'user',content:userMsg}]})
+    });
+    var data=await resp.json();
+    var reply=(data.content&&data.content[0]&&data.content[0].text)||'Erreur de connexion.';
+    var el=document.getElementById('briefing-content');
+    if(el) el.innerHTML='<div style="white-space:pre-wrap">'+reply+'</div>';
+  }catch(e){
+    var el=document.getElementById('briefing-content');
+    if(el) el.innerHTML='<div style="color:var(--accent2)">Erreur de connexion.</div>';
+  }
 }
 
 function showDebriefPrompt(session){
@@ -1582,15 +1615,50 @@ function showDebriefPrompt(session){
 }
 
 async function getDebrief(sessionId){
-  const session=S.history.find(h=>h.id===sessionId);
+  var session=S.history.find(function(h){return h.id===sessionId;});
   if(!session)return;
-  nav('coach');
-  const summary=session.exercises.map(ex=>{
-    const done=ex.sets.filter(s=>s.done);
-    const avgRpe=done.filter(s=>s.rpe).reduce((a,s)=>a+s.rpe,0)/(done.filter(s=>s.rpe).length||1);
-    return `${ex.name}: ${done.length} séries, meilleur set ${(done[0]&&done[0].weight)||'?'} lbs × ${(done[0]&&done[0].reps)||'?'} reps${avgRpe?`, RPE moy ${avgRpe.toFixed(1)}`:''}`;
+  // Show debrief in modal
+  showModal(
+    '<div class="modal-handle"></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
+      '<div style="font-size:28px">🤖</div>'+
+      '<div class="modal-title" style="margin-bottom:0">DEBRIEFING COACH</div>'+
+    '</div>'+
+    '<div id="debrief-content" style="font-size:14px;color:var(--text2);line-height:1.7;min-height:80px;display:flex;align-items:center;justify-content:center">'+
+      '<div style="text-align:center"><div style="font-size:20px;margin-bottom:8px">⏳</div>Analyse en cours...</div>'+
+    '</div>'+
+    '<div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+      '<button class="btn btn-secondary" onclick="closeModal();nav(\'home\')">Accueil</button>'+
+      '<button class="btn btn-ghost" onclick="closeModal()">Fermer</button>'+
+    '</div>'
+  );
+  if(!S.apiKey){
+    var el=document.getElementById('debrief-content');
+    if(el) el.innerHTML='<div style="color:var(--accent2)">⚠️ Clé API manquante.<br>Va dans Réglages → Coach IA.</div>';
+    return;
+  }
+  var summary=session.exercises.map(function(ex){
+    var done=ex.sets.filter(function(s){return s.done;});
+    var rpeArr=done.filter(function(s){return s.rpe;});
+    var avgRpe=rpeArr.length>0?rpeArr.reduce(function(a,s){return a+s.rpe;},0)/rpeArr.length:0;
+    return ex.name+': '+done.length+' séries, meilleur set '+((done[0]&&done[0].weight)||'?')+' lbs × '+((done[0]&&done[0].reps)||'?')+' reps'+(avgRpe?', RPE moy '+avgRpe.toFixed(1):'');
   }).join('; ');
-  await sendCoachMsg(`Voici mon debriefing pour ${session.dayName} (${fmtLbs(session.volume)} lbs en ${formatDur(session.duration)}): ${summary}. Analyse ma performance et donne-moi tes recommandations.`);
+  var systemPrompt='Tu es le coach IA de FORGE. Réponds en français, utilise des lbs. Sois concis (150 mots max).';
+  var userMsg='Debriefing '+session.dayName+' ('+fmtLbs(session.volume)+' lbs en '+formatDur(session.duration)+'): '+summary+'. Analyse ma performance et donne tes recommandations.';
+  try{
+    var resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,system:systemPrompt,messages:[{role:'user',content:userMsg}]})
+    });
+    var data=await resp.json();
+    var reply=(data.content&&data.content[0]&&data.content[0].text)||'Erreur de connexion.';
+    var el=document.getElementById('debrief-content');
+    if(el) el.innerHTML='<div style="white-space:pre-wrap">'+reply+'</div>';
+  }catch(e){
+    var el=document.getElementById('debrief-content');
+    if(el) el.innerHTML='<div style="color:var(--accent2)">Erreur de connexion.</div>';
+  }
 }
 
 // ═══════════════════════════════════════
