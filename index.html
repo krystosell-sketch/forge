@@ -1461,6 +1461,68 @@ function sendCoachInput(){
   sendCoachMsg(msg);
 }
 
+function buildCoachContext(){
+  var ps=S.programState;
+  var p=S.profile||{};
+  var DAYS_ORDER=['Full Body','Upper','Lower','Arms/Delts'];
+  var nextDay=DAYS_ORDER[ps.daysCompleted%4];
+
+  // Recent sessions with details
+  var recentSessions=S.history.slice(0,5).map(function(h){
+    var rpeArr=[];
+    (h.exercises||[]).forEach(function(ex){
+      ex.sets.filter(function(s){return s.done&&s.rpe;}).forEach(function(s){rpeArr.push(s.rpe);});
+    });
+    var avgRpe=rpeArr.length>0?(rpeArr.reduce(function(a,b){return a+b;},0)/rpeArr.length).toFixed(1):'?';
+    var fatigue=h.fatigue?'Énergie '+h.fatigue+'/5':'';
+    var stress=h.stress?'Stress '+h.stress+'/5':'';
+    var wellness=[fatigue,stress].filter(Boolean).join(', ');
+    return h.dayName+' (Sem.'+h.week+'): '+fmtLbs(h.volume)+' lbs, '+formatDur(h.duration)+(avgRpe!='?'?', RPE moy '+avgRpe:'')+(wellness?', '+wellness:'')+' — '+formatDate(h.date);
+  }).join('\n');
+
+  // PRs with 1RM
+  var prs=buildPRs().slice(0,8).map(function(p){
+    return p.name+': '+p.weight+' lbs x '+p.reps+' reps (1RM est. '+est1RM(p.weight,p.reps)+' lbs)';
+  }).join('\n');
+
+  // Last performance per exercise for next session
+  var nextDayExs=(PROGRAM[ps.week]&&PROGRAM[ps.week][nextDay])||[];
+  var lastPerfs=nextDayExs.map(function(e){
+    var lp=getLastPerf(e.name);
+    return e.name+': '+(lp?lp.weight+' lbs x '+lp.reps+' reps ('+fmtAgo(lp.date)+')':'premier essai');
+  }).join('\n');
+
+  // Volume trend (last 4 weeks)
+  var now=Date.now();
+  var weekVols=[];
+  for(var w=3;w>=0;w--){
+    var s2=now-(w+1)*7*86400000,e2=now-w*7*86400000;
+    var vol=S.history.filter(function(h){return h.date>=s2&&h.date<e2;}).reduce(function(a,h){return a+(h.volume||0);},0);
+    weekVols.push('S-'+w+': '+fmtLbs(vol)+' lbs');
+  }
+
+  // Average RPE trend
+  var rpeRecent=S.history.slice(0,8).map(function(h){
+    var arr=(h.exercises||[]).flatMap?
+      (h.exercises||[]).flatMap(function(ex){return ex.sets.filter(function(s){return s.done&&s.rpe;}).map(function(s){return s.rpe;});}) :
+      [].concat.apply([],(h.exercises||[]).map(function(ex){return ex.sets.filter(function(s){return s.done&&s.rpe;}).map(function(s){return s.rpe;});}));
+    return arr.length>0?(arr.reduce(function(a,b){return a+b;},0)/arr.length).toFixed(1):null;
+  }).filter(Boolean);
+  var avgRpeTrend=rpeRecent.length>0?(rpeRecent.reduce(function(a,b){return parseFloat(a)+parseFloat(b);},0)/rpeRecent.length).toFixed(1):'N/A';
+
+  var nl='\n';
+  return 'PROFIL:'+nl+
+    'Nom:'+(p.name||'?')+' Niveau:'+(p.level||'?')+' Objectif:'+(p.goal||'?')+' Age:'+(p.age||'?')+'ans Poids:'+(p.weight||'?')+'lbs'+nl+nl+
+    'PROGRAMME:'+nl+
+    'Semaine '+ps.week+'/12 Cycle '+(ps.cycleCount+1)+' Total:'+S.history.length+' seances'+nl+
+    'Prochain:'+nextDay+nl+nl+
+    'SEANCES RECENTES:'+nl+(recentSessions||'Aucune')+nl+nl+
+    'VOLUME (4 sem):'+nl+weekVols.join(' | ')+nl+nl+
+    'RPE MOYEN:'+avgRpeTrend+'/10'+nl+nl+
+    'RECORDS:'+nl+(prs||'Aucun')+nl+nl+
+    'CHARGES PROCHAIN JOUR ('+nextDay+'):'+nl+(lastPerfs||'Premier');
+}
+
 async function sendCoachMsg(userMsg){
   S.chatHistory.push({role:'user',content:userMsg});
   save();
@@ -1471,18 +1533,13 @@ async function sendCoachMsg(userMsg){
     save();renderCoach();return;
   }
 
-  // Build context
-  const ps=S.programState;
-  const recentSessions=S.history.slice(0,5).map(h=>`- ${h.dayName} (Sem.${h.week}): ${fmtLbs(h.volume)} lbs, ${formatDate(h.date)}`).join('\n');
-  const prs=buildPRs().slice(0,5).map(p=>`- ${p.name}: ${p.weight} lbs × ${p.reps}`).join('\n');
-
-  const systemPrompt=`Tu es le coach IA de FORGE, une app de musculation. Tu t'adresses à ${(S.profile&&S.profile.name)||'l\'athlète'} en français.
-Profil: ${(S.profile&&S.profile.level)||'intermédiaire'}, objectif ${(S.profile&&S.profile.goal)||'hypertrophie'}, ${(S.profile&&S.profile.age)||'?'} ans, ${(S.profile&&S.profile.weight)||'?'} lbs.
-Programme: Semaine ${ps.week}/12, Cycle ${ps.cycleCount+1}, Jour ${(ps.daysCompleted%4)+1}/4.
-Séances récentes:\n${recentSessions||'Aucune encore.'}
-Records personnels:\n${prs||'Aucun encore.'}
-Total séances: ${S.history.length}.
-Réponds en français, utilise des lbs, dis "séries" et "répétitions". Sois précis, motivant, et concis (150 mots max).`;
+  // Build rich context
+  const coachCtx=buildCoachContext();
+  const systemPrompt='Tu es le coach IA personnel de FORGE, une app de musculation avancée.'+
+    ' Tu analyses les données détaillées de l\'athlète pour donner des conseils précis et personnalisés.'+
+    ' Réponds toujours en français. Utilise des lbs, dis séries et répétitions.'+
+    ' Sois direct, précis et motivant. Maximum 200 mots par réponse sauf si demande d\'analyse détaillée.\n\n'+
+    'DONNÉES COMPLÈTES DE L\'ATHLÈTE:\n'+coachCtx;
 
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{
@@ -1577,9 +1634,9 @@ async function getBriefing(week,day){
     return;
   }
   var ps=S.programState;
-  var recentSessions=S.history.slice(0,3).map(function(h){return '- '+h.dayName+' (Sem.'+h.week+'): '+fmtLbs(h.volume)+' lbs';}).join(', ');
-  var systemPrompt='Tu es le coach IA de FORGE. Réponds en français, utilise des lbs, dis séries et répétitions. Sois concis (100 mots max).';
-  var userMsg='Donne-moi un briefing motivant pour ma séance '+day+' de la semaine '+week+'. Séances récentes: '+recentSessions+'. Dis-moi sur quoi me concentrer.';
+  var coachCtx=buildCoachContext();
+  var systemPrompt='Tu es le coach IA de FORGE. Réponds en français, utilise des lbs, dis séries et répétitions. Maximum 120 mots.\n\nDONNÉES ATHLÈTE:\n'+coachCtx;
+  var userMsg='Donne-moi un briefing pour ma séance '+day+' (Semaine '+week+'). Analyse mes données récentes, mentionne les charges cibles pour les exercices clés et dis-moi sur quoi me concentrer aujourd\'hui.';
   try{
     var resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -1645,8 +1702,9 @@ async function getDebrief(sessionId){
     var avgRpe=rpeArr.length>0?rpeArr.reduce(function(a,s){return a+s.rpe;},0)/rpeArr.length:0;
     return ex.name+': '+done.length+' séries, meilleur set '+((done[0]&&done[0].weight)||'?')+' lbs × '+((done[0]&&done[0].reps)||'?')+' reps'+(avgRpe?', RPE moy '+avgRpe.toFixed(1):'');
   }).join('; ');
-  var systemPrompt='Tu es le coach IA de FORGE. Réponds en français, utilise des lbs. Sois concis (150 mots max).';
-  var userMsg='Debriefing '+session.dayName+' ('+fmtLbs(session.volume)+' lbs en '+formatDur(session.duration)+'): '+summary+'. Analyse ma performance et donne tes recommandations.';
+  var coachCtx=buildCoachContext();
+  var systemPrompt='Tu es le coach IA de FORGE. Réponds en français, utilise des lbs. Maximum 180 mots.\n\nDONNÉES ATHLÈTE:\n'+coachCtx;
+  var userMsg='Debriefing séance terminée - '+session.dayName+' ('+fmtLbs(session.volume)+' lbs en '+formatDur(session.duration)+').\nDétail: '+summary+'.\nAnalyse ma performance vs mes données historiques et donne des recommandations concrètes pour la prochaine fois.';
   try{
     var resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
