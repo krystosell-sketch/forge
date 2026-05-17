@@ -891,18 +891,9 @@ async function getAIChargesAndBriefing(week,day,fatigue,stress){
     },300);
 
   }catch(e){
-    // On any error (timeout, parse error, API error) - just start workout normally
     closeModal();
-    var errMsg=e.name==='AbortError'?'Delai depasse — charges precedentes utilisees.':'Erreur IA — charges precedentes utilisees.';
-    // Show brief error then navigate
-    showModal(
-      '<div class="modal-handle"></div>'+
-      '<div style="text-align:center;padding:10px 0">'+
-        '<div style="font-size:28px;margin-bottom:8px">⚠️</div>'+
-        '<div style="font-size:14px;color:var(--text2)">'+errMsg+'</div>'+
-      '</div>'+
-      '<div style="margin-top:14px"><button class="btn btn-primary btn-full" onclick="closeModal();nav(\'workout\');renderWorkout()">Commencer quand meme</button></div>'
-    );
+    if(window._aiAnalysisCancelled||!S.active){return;}
+    nav('workout');
   }
 }
 
