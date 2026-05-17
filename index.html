@@ -836,56 +836,138 @@ function showExHistoryByEl(el){
   if(name)showExHistory(name);
 }
 function showExHistory(exName){
-  const perf=[];
-  S.history.forEach(h=>{
-    const ex=(h.exercises&&h.exercises.find)(e=>e.name===exName);
+  // Collect all performances for this exercise
+  var perf=[];
+  S.history.forEach(function(h){
+    var ex=(h.exercises||[]).find(function(e){return e.name===exName;});
     if(ex){
-      const done=ex.sets.filter(s=>s.done&&s.weight&&s.reps&&!s.flag);
+      var done=ex.sets.filter(function(s){return s.done&&s.weight&&s.reps&&!s.flag;});
       if(done.length>0){
-        const best=done.reduce((b,s)=>parseFloat(s.weight)*parseInt(s.reps)>parseFloat(b.weight)*parseInt(b.reps)?s:b);
+        var best=done.reduce(function(b,s){return parseFloat(s.weight)*parseInt(s.reps)>parseFloat(b.weight)*parseInt(b.reps)?s:b;});
         perf.push({date:h.date,weight:parseFloat(best.weight),reps:parseInt(best.reps),rpe:best.rpe});
       }
     }
   });
 
   if(perf.length===0){
-    showModal('<div class="modal-handle"></div><div class="modal-title">'+exName+'</div><div style="color:var(--text3);font-size:13px">Aucun historique encore.</div>');
+    showModal('<div class="modal-handle"></div><div class="modal-title">'+exName+'</div><div style="color:var(--text3);font-size:13px;padding:20px 0">Aucun historique encore — premier essai!</div>');
     return;
   }
 
+  // Sort chronologically for chart
+  var chronoPerf=perf.slice().sort(function(a,b){return a.date-b.date;});
+
+  // Find overall PR (best set by weight)
+  var pr=perf.reduce(function(b,p){return p.weight>b.weight||(p.weight===b.weight&&p.reps>b.reps)?p:b;});
+
+  // 1RM history for trend chart
+  var rm1History=chronoPerf.map(function(p){return {date:p.date,rm1:est1RM(p.weight,p.reps),weight:p.weight,reps:p.reps};});
+  var maxRM1=Math.max.apply(null,rm1History.map(function(p){return p.rm1;}));
+  var minRM1=Math.min.apply(null,rm1History.map(function(p){return p.rm1;}));
+  var rangeRM1=maxRM1-minRM1||1;
+
+  // Build SVG chart for 1RM evolution
+  var W=280,H=70,pad=6;
+  var chartHtml='';
+  if(rm1History.length>=2){
+    var pts=rm1History.map(function(p,i){
+      return {
+        x:pad+(i/(rm1History.length-1))*(W-pad*2),
+        y:H-pad-(((p.rm1-minRM1)/rangeRM1)*(H-pad*2)),
+        rm1:p.rm1,weight:p.weight,reps:p.reps,date:p.date
+      };
+    });
+    var path='M'+pts.map(function(p){return p.x+','+p.y;}).join(' L');
+    var areaPath='M'+pts[0].x+','+H+' L'+pts.map(function(p){return p.x+','+p.y;}).join(' L')+' L'+pts[pts.length-1].x+','+H+' Z';
+    var dots=pts.map(function(p){return '<circle cx="'+p.x+'" cy="'+p.y+'" r="3.5" fill="var(--accent3)"/>';}).join('');
+    // Mark PR point
+    var prPt=pts.reduce(function(b,p){return p.rm1>b.rm1?p:b;});
+    var prDot='<circle cx="'+prPt.x+'" cy="'+prPt.y+'" r="5" fill="var(--accent2)" stroke="var(--bg2)" stroke-width="2"/>';
+
+    chartHtml='<div style="margin-bottom:12px">'+
+      '<div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;margin-bottom:6px">ÉVOLUTION DU 1RM ESTIMÉ</div>'+
+      '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px;display:block">'+
+        '<defs><linearGradient id="exg" x1="0" y1="0" x2="0" y2="1">'+
+          '<stop offset="0%" stop-color="#40c8ff" stop-opacity=".25"/>'+
+          '<stop offset="100%" stop-color="#40c8ff" stop-opacity="0"/>'+
+        '</linearGradient></defs>'+
+        '<path d="'+areaPath+'" fill="url(#exg)"/>'+
+        '<path d="'+path+'" fill="none" stroke="var(--accent3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
+        dots+prDot+
+      '</svg>'+
+      '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:3px">'+
+        '<span>'+formatDate(rm1History[0].date)+'</span>'+
+        '<span style="color:var(--accent3);font-weight:700">1RM: '+maxRM1+' lbs</span>'+
+        '<span>'+formatDate(rm1History[rm1History.length-1].date)+'</span>'+
+      '</div>'+
+    '</div>';
+  }
+
   // Records by rep count
-  const repRecords={};
-  perf.forEach(p=>{
-    if(!repRecords[p.reps]||p.weight>repRecords[p.reps].weight)repRecords[p.reps]=p;
+  var repRecords={};
+  perf.forEach(function(p){
+    if(!repRecords[p.reps]||p.weight>repRecords[p.reps].weight) repRecords[p.reps]=p;
   });
-  const repKeys=[1,2,3,4,5,6,8,10,12,15,20].filter(r=>repRecords[r]);
+  var repKeys=[1,2,3,4,5,6,8,10,12,15,20].filter(function(r){return repRecords[r];});
 
-  showModal(
+  // Build modal with DOM to avoid quote issues
+  var container=document.createElement('div');
+  container.innerHTML=
     '<div class="modal-handle"></div>'+
-    '<div class="modal-title" style="font-size:16px">📈 '+exName+'</div>'+
+    '<div style="font-size:15px;font-weight:700;color:var(--accent3);margin-bottom:12px">📈 '+exName+'</div>'+
 
-    // Best set
+    // PR stats
     '<div class="stat-grid" style="margin-bottom:12px">'+
-      '<div class="stat-box"><div class="stat-val" style="color:var(--accent2)">'+perf[perf.length-1].weight+' lbs</div><div class="stat-lbl">Meilleur poids</div></div>'+
-      '<div class="stat-box"><div class="stat-val" style="color:var(--accent3)">'+est1RM(perf[perf.length-1].weight,perf[perf.length-1].reps)+' lbs</div><div class="stat-lbl">1RM estimé</div></div>'+
+      '<div class="stat-box">'+
+        '<div class="stat-val" style="color:var(--accent2)">'+pr.weight+' lbs</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:2px">PR — '+pr.reps+' reps</div>'+
+        '<div style="font-size:10px;color:var(--text3)">'+formatDate(pr.date)+'</div>'+
+      '</div>'+
+      '<div class="stat-box">'+
+        '<div class="stat-val" style="color:var(--accent3)">'+est1RM(pr.weight,pr.reps)+' lbs</div>'+
+        '<div style="font-size:11px;color:var(--text3);margin-top:2px">1RM estimé (Epley)</div>'+
+        '<div style="font-size:10px;color:var(--text3)">Best: '+maxRM1+' lbs</div>'+
+      '</div>'+
     '</div>'+
+
+    // Chart
+    chartHtml+
 
     // Records by reps
     (repKeys.length>0?
-      '<div class="label" style="padding:0 0 6px">RECORDS PAR REPS</div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">'+
-      repKeys.map(r=>'<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 10px;text-align:center"><div style="font-size:13px;font-weight:700;color:var(--accent)">'+repRecords[r].weight+' lbs</div><div style="font-size:10px;color:var(--text3)">×'+r+' reps</div></div>').join('')+
-      '</div>':'')+
+      '<div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;margin-bottom:6px">RECORDS PAR REPS</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">'+
+      repKeys.map(function(r){
+        return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;text-align:center">'+
+          '<div style="font-size:13px;font-weight:700;color:var(--accent)">'+repRecords[r].weight+' lbs</div>'+
+          '<div style="font-size:10px;color:var(--text3)">×'+r+' reps</div>'+
+          '<div style="font-size:9px;color:var(--text3)">1RM '+est1RM(repRecords[r].weight,r)+'</div>'+
+        '</div>';
+      }).join('')+
+      '</div>':'') +
 
-    // History list
-    '<div class="label" style="padding:0 0 6px">HISTORIQUE</div>'+
-    perf.slice(-6).reverse().map(p=>
-      '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">'+
-        '<span style="font-size:12px;color:var(--text3)">'+formatDate(p.date)+'</span>'+
-        '<span style="font-size:13px;font-weight:600">'+p.weight+' lbs × '+p.reps+(p.rpe?' · RPE '+p.rpe:'')+'</span>'+
-      '</div>'
-    ).join('')
-  );
+    // Full history
+    '<div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;margin-bottom:6px">HISTORIQUE COMPLET ('+perf.length+' séances)</div>'+
+    '<div style="max-height:300px;overflow-y:auto">'+
+    perf.slice().reverse().map(function(p){
+      var isPR=p.weight===pr.weight&&p.reps===pr.reps&&p.date===pr.date;
+      var rm1=est1RM(p.weight,p.reps);
+      return '<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">'+
+        '<div>'+
+          '<div style="font-size:11px;color:var(--text3)">'+formatDate(p.date)+'</div>'+
+          (p.rpe?'<div style="font-size:10px;color:var(--text3)">RPE '+p.rpe+'</div>':'')+''+
+        '</div>'+
+        '<div style="text-align:right">'+
+          '<div style="font-size:13px;font-weight:700;font-family:JetBrains Mono,monospace">'+p.weight+' lbs × '+p.reps+'</div>'+
+          '<div style="font-size:10px;color:var(--accent3)">1RM est. '+rm1+' lbs</div>'+
+        '</div>'+
+        (isPR?'<div style="background:rgba(255,64,64,.15);border:1px solid rgba(255,64,64,.3);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:800;color:var(--accent2)">PR</div>':'<div></div>')+
+      '</div>';
+    }).join('')+
+    '</div>'+
+    '<div style="margin-top:14px"><button class="btn btn-secondary btn-full" onclick="closeModal()">Fermer</button></div>';
+
+  showModal(container.innerHTML);
 }
 
 function showRestEdit(ei){
