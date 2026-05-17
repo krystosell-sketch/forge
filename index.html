@@ -1026,6 +1026,139 @@ function delSet(ei){
   save();renderWorkout();
 }
 
+function getSetTypeIcon(t){
+  if(t==='warmup') return 'W';
+  if(t==='drop') return 'D';
+  if(t==='failure') return 'F';
+  return '#';
+}
+
+function cycleSetType(ei,si){
+  if(!S.active) return;
+  var types=['normal','warmup','drop','failure'];
+  var s=S.active.exercises[ei].sets[si];
+  var idx=types.indexOf(s.setType||'normal');
+  s.setType=types[(idx+1)%types.length];
+  save();renderWorkout();
+}
+
+function showFlagMenu(ei,si){
+  var flags=[['🤕','Douleur'],['😓','Fatigue'],['⚙️','Technique'],['🔄','Substitution'],['📉','Charge réduite']];
+  var btns=flags.map(function(f){
+    var btn=document.createElement('button');
+    btn.className='btn btn-secondary btn-full';
+    btn.style.marginBottom='8px';
+    btn.textContent=f[0]+' '+f[1];
+    btn.onclick=function(){setFlag(ei,si,f[0]+' '+f[1]);closeModal();renderWorkout();};
+    return btn.outerHTML;
+  }).join('');
+  showModal(
+    '<div class="modal-handle"></div>'+
+    '<div class="modal-title">🚩 MARQUER CE SET</div>'+
+    '<div style="font-size:12px;color:var(--text2);margin-bottom:12px">Ce set sera exclu du calcul des PRs</div>'+
+    btns+
+    '<button class="btn btn-ghost btn-full" onclick="setFlag('+ei+','+si+',null);closeModal();renderWorkout()">✕ Retirer le flag</button>'
+  );
+}
+
+function setFlag(ei,si,flag){
+  if(!S.active) return;
+  S.active.exercises[ei].sets[si].flag=flag;
+  save();
+}
+
+function showRPETooltip(){
+  var rows=[['6','Très facile — 4+ reps en réserve'],['7','Facile — 3 reps en réserve'],['8','Modéré — 2 reps en réserve ← idéal'],['9','Difficile — 1 rep en réserve'],['10','Échec musculaire']];
+  showModal(
+    '<div class="modal-handle"></div>'+
+    '<div class="modal-title">RPE — Effort Perçu</div>'+
+    '<div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">Rate of Perceived Exertion — effort sur 10</div>'+
+    rows.map(function(r){
+      return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'+
+        '<div style="font-family:JetBrains Mono,monospace;font-size:18px;font-weight:700;color:var(--accent);width:24px">'+r[0]+'</div>'+
+        '<div style="font-size:13px;color:var(--text2)">'+r[1]+'</div>'+
+      '</div>';
+    }).join('')+
+    '<div style="margin-top:14px"><button class="btn btn-secondary btn-full" onclick="closeModal()">Compris</button></div>'
+  );
+}
+
+function showRestEdit(ei){
+  if(!S.active) return;
+  var ex=S.active.exercises[ei];
+  var cur=ex.restSec||120;
+  var btns=[60,90,120,150,180,240,300].map(function(s){
+    var active=cur===s;
+    var lbl=s<60?s+'s':s%60===0?(s/60)+'min':Math.floor(s/60)+'m'+(s%60)+'s';
+    return '<button onclick="saveRestTime('+ei+','+s+')" style="flex:1;padding:10px 4px;border-radius:8px;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'var(--accent)':'var(--bg3)')+';color:'+(active?'#0d0d0d':'var(--text)')+';cursor:pointer;font-size:11px;font-weight:600">'+lbl+'</button>';
+  }).join('');
+  showModal(
+    '<div class="modal-handle"></div>'+
+    '<div class="modal-title">⏱ TEMPS DE REPOS</div>'+
+    '<div style="font-size:13px;color:var(--text2);margin-bottom:14px">Pour '+ex.name+'<br><span style="font-size:11px;color:var(--text3)">Mémorisé pour les prochains entraînements</span></div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:14px">'+btns+'</div>'+
+    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">'+
+      '<label style="font-size:12px;color:var(--text2);white-space:nowrap">Personnalisé (sec):</label>'+
+      '<input type="number" id="custom-rest" value="'+cur+'" inputmode="numeric" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:JetBrains Mono,monospace;text-align:center;font-size:15px;outline:none">'+
+      '<button class="btn btn-primary btn-sm" onclick="saveRestTimeCustom('+ei+')">OK</button>'+
+    '</div>'
+  );
+}
+
+function saveRestTimeCustom(ei){
+  var val=parseInt(document.getElementById('custom-rest').value)||120;
+  saveRestTime(ei,val);
+}
+
+function saveRestTime(ei,sec){
+  if(!S.active) return;
+  var exName=S.active.exercises[ei].name;
+  S.active.exercises[ei].restSec=sec;
+  if(!S.customRestTimes) S.customRestTimes={};
+  S.customRestTimes[exName]=sec;
+  DB.set('customRestTimes',S.customRestTimes);
+  save();
+  closeModal();
+  renderWorkout();
+}
+
+function updExNote(ei,val){
+  if(!S.active) return;
+  S.active.exercises[ei].note=val;
+  save();
+}
+
+function updSet(ei,si,field,val){
+  if(!S.active) return;
+  S.active.exercises[ei].sets[si][field]=field==='rpe'?parseInt(val)||'':parseFloat(val)||'';
+  save();
+}
+
+function toggleSet(ei,si){
+  if(!S.active) return;
+  var s=S.active.exercises[ei].sets[si];
+  s.done=!s.done;
+  save();
+  if(s.done) startTimer(S.active.exercises[ei].restSec||120);
+  renderWorkout();
+}
+
+function addSet(ei){
+  if(!S.active) return;
+  var sets=S.active.exercises[ei].sets;
+  var last=sets[sets.length-1]||{weight:'',reps:'',rpe:'',done:false,flag:null,setType:'normal'};
+  sets.push({weight:last.weight,reps:last.reps,rpe:'',done:false,flag:null,setType:'normal'});
+  save();renderWorkout();
+}
+
+function delSet(ei){
+  if(!S.active) return;
+  var sets=S.active.exercises[ei].sets;
+  if(sets.length>1) sets.pop();
+  save();renderWorkout();
+}
+
+
 function showAbandon(){
   showConfirm('Abandonner la séance?','Elle ne sera PAS sauvegardée dans ton historique.',()=>{
     window._aiAnalysisCancelled=true;
