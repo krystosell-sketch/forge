@@ -514,7 +514,7 @@ function renderHome(){
   const totalSessions=S.history.length;
 
   const activeBanner=S.active?`
-    <div class="active-banner" onclick="nav('workout')">
+    <div class="active-banner" onclick="nav('workout');renderWorkout()">
       <div><div style="font-size:13px;font-weight:700"><span class="pulse"></span>Séance en cours</div>
       <div style="font-size:11px;color:var(--text2);margin-top:2px">${S.active.dayName} — Sem. ${S.active.week}</div></div>
       <span style="color:var(--accent);font-size:22px">›</span>
@@ -805,27 +805,20 @@ function initWorkout(week,day,fatigue,stress){
 }
 
 async function getAIChargesAndBriefing(week,day,fatigue,stress){
-  var coachCtx=buildCoachContext();
   var exCtx=buildExerciseContext();
+  var ps=S.programState;
+  var p=S.profile||{};
   var fatigueLabel=['','Epuise','Fatigue','Normal','Bien','Excellent'];
   var stressLabel=['','Tres stresse','Stresse','Neutre','Calme','Zen'];
-  var wellnessStr=(fatigue?'Energie: '+fatigueLabel[fatigue]+'('+fatigue+'/5)':'Energie non renseignee')+(stress?' | Mental: '+stressLabel[stress]+'('+stress+'/5)':' | Mental non renseigne');
-
-  var systemPrompt='Tu es un coach de musculation expert en surcharge progressive. Reponds UNIQUEMENT en JSON valide, aucun texte avant ou apres, aucun markdown.';
-
+  var wellStr=(fatigue?fatigueLabel[fatigue]+fatigue+'/5':'?')+'|'+(stress?stressLabel[stress]+stress+'/5':'?');
   var nl='\n';
-  var userMsg='CONTEXTE:'+nl+coachCtx+nl+nl+
-    'ETAT DU JOUR: '+wellnessStr+nl+nl+
-    'EXERCICES ET HISTORIQUE:'+nl+exCtx+nl+nl+
-    'REGLES:'+nl+
-    '- Increment barbell/EZ-bar: +5 lbs | Halteres/Machine/Cable: +2.5 lbs'+nl+
-    '- Augmenter si borne haute atteinte ET RPE<=8 ET pas de flags douleur recents'+nl+
-    '- Maintenir si dans la plage mais pas a la borne haute ou RPE 8-9'+nl+
-    '- Reduire si sous la plage, RPE>=9, flags douleur, energie<=2/5'+nl+
-    '- Vision long terme: analyser tendance 4-6 semaines'+nl+
-    '- Si premier exercice: suggere poids de depart conservateur'+nl+nl+
-    'JSON attendu:'+nl+
-    '{"briefing":"message 80 mots max","charges":{"NOM_EXERCICE":{"weight":0,"reps":0,"note":"raison"}}}';
+
+  var systemPrompt='Coach musculation surcharge progressive. Reponds JSON UNIQUEMENT sans texte ni markdown.';
+  var userMsg=
+    'Athlete:'+( p.name||'?')+' Sem:'+week+'/12 Cycle:'+(ps.cycleCount+1)+' Seances:'+S.history.length+' EnergieMental:'+wellStr+nl+
+    'EXERCICES:'+nl+exCtx+nl+nl+
+    'REGLES: barbell/EZ=+5lbs|DB/machine/cable=+2.5lbs|corps=reps. Augmenter si borne haute+RPE<=8. Maintenir si dans plage ou RPE8-9. Reduire si sous plage/RPE>=9/flags douleur/energie<=2.'+nl+
+    'RETOURNE: {"briefing":"50 mots max","charges":{"NOM_EXACT":{"weight":0,"reps":0,"note":"court"}}}';
 
   try{
     // Timeout after 20 seconds
