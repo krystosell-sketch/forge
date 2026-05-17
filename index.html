@@ -647,409 +647,185 @@ function selW(type,val,container){
   });
 }
 
+function getIncrement(exName){
+  var n=exName.toLowerCase();
+  // Bodyweight - no weight suggestion
+  if(n.includes('dip')&&!n.includes('db')&&!n.includes('seated')) return 0;
+  if(n.includes('pull-up')||n.includes('chin-up')||n.includes('dead hang')) return 0;
+  // Barbell / EZ-Bar - 5 lbs increment (2.5 each side)
+  if(n.includes('barbell')||n.includes('ez-bar')||n.includes('belt squat')||n.includes('rdl')) return 5;
+  // Dumbbell - 2.5 lbs increment
+  if(n.includes(' db ')||n.startsWith('db ')||n.includes('dumbbell')||n.includes('zottman')||n.includes('hammer curl')||n.includes('alternating')) return 2.5;
+  // Everything else (machine, cable, pulldown, etc.) - 2.5 lbs
+  return 2.5;
+}
+
+function getLastExPerf(exName){
+  // Get up to 12 sessions for this exercise
+  var perfs=[];
+  S.history.forEach(function(h){
+    var ex=(h.exercises||[]).find(function(e){return e.name===exName;});
+    if(ex){
+      var done=ex.sets.filter(function(s){return s.done&&s.weight&&s.reps&&!s.flag;});
+      var flagged=ex.sets.filter(function(s){return s.done&&s.flag;});
+      if(done.length>0){
+        var bestWeight=Math.max.apply(null,done.map(function(s){return parseFloat(s.weight)||0;}));
+        var bestReps=done.reduce(function(b,s){return parseFloat(s.weight)===bestWeight&&parseInt(s.reps)>b?parseInt(s.reps):b;},0);
+        var rpeArr=done.filter(function(s){return s.rpe;}).map(function(s){return s.rpe;});
+        var avgRpe=rpeArr.length>0?(rpeArr.reduce(function(a,b){return a+b;},0)/rpeArr.length).toFixed(1):null;
+        perfs.push({
+          date:h.date,
+          sets:done.map(function(s){return {weight:parseFloat(s.weight)||0,reps:parseInt(s.reps)||0,rpe:s.rpe||null};}),
+          bestWeight:bestWeight,
+          bestReps:bestReps,
+          avgRpe:avgRpe,
+          hasFlag:flagged.length>0,
+          flagTypes:[...new Set(flagged.map(function(s){return s.flag||'';}))].join(',')
+        });
+      }
+    }
+  });
+  return perfs; // Most recent first
+}
+
+function buildExerciseContext(){
+  var aw=S.active;
+  if(!aw) return '';
+  var nl='\n';
+  var lines=[];
+
+  aw.exercises.forEach(function(ex){
+    var perfs=getLastExPerf(ex.name);
+    var inc=getIncrement(ex.name);
+    var repRange=ex.targetReps||'6-8';
+    var parts=repRange.split('-');
+    var repHigh=parseInt(parts[parts.length-1])||8;
+    var isBodyweight=inc===0;
+
+    // Trend analysis over 12 sessions
+    var trend='';
+    var weightTrend='stable';
+    if(perfs.length>=3){
+      var recent3=perfs.slice(0,3).map(function(p){return p.bestWeight;});
+      var older3=perfs.slice(Math.max(0,perfs.length-3)).map(function(p){return p.bestWeight;});
+      var avgRecent=recent3.reduce(function(a,b){return a+b;},0)/recent3.length;
+      var avgOlder=older3.reduce(function(a,b){return a+b;},0)/older3.length;
+      if(avgRecent>avgOlder+2) weightTrend='progression';
+      else if(avgRecent<avgOlder-2) weightTrend='regression';
+      else weightTrend='plateau';
+    }
+
+    // Check plateau duration
+    var plateauWeeks=0;
+    if(perfs.length>=2){
+      var baseW=perfs[0].bestWeight;
+      for(var i=1;i<perfs.length;i++){
+        if(Math.abs(perfs[i].bestWeight-baseW)<=2) plateauWeeks++;
+        else break;
+      }
+    }
+
+    // Recent flags
+    var recentFlags=perfs.slice(0,4).filter(function(p){return p.hasFlag;}).map(function(p){return p.flagTypes;}).join(',');
+
+    // Build condensed 12-session history
+    var histStr='Aucun historique';
+    if(perfs.length>0){
+      // Last 12 sessions condensed: date|bestW x bestR|RPE
+      histStr=perfs.slice(0,12).map(function(p){
+        var d=new Date(p.date);
+        var dateStr=(d.getMonth()+1)+'/'+(d.getDate());
+        var rpeStr=p.avgRpe?'RPE'+p.avgRpe:'';
+        var flagStr=p.hasFlag?'[FLAG:'+p.flagTypes+']':'';
+        // Check if rep target was reached
+        var repTarget=p.sets.some(function(s){return s.reps>=repHigh;})?'✓':'✗';
+        return dateStr+':'+p.bestWeight+'lbs x'+p.bestReps+repTarget+(rpeStr?' '+rpeStr:'')+(flagStr?' '+flagStr:'');
+      }).join(' | ');
+    }
+
+    var summary=ex.name+
+      '|Plage:'+repRange+
+      '|Increment:'+(isBodyweight?'poids corps':inc+'lbs')+
+      '|Tendance:'+weightTrend+
+      (plateauWeeks>1?'|Plateau:'+plateauWeeks+'seances':'')+
+      (recentFlags?'|Flags recents:'+recentFlags:'')+
+      '|Historique(12sem):'+histStr;
+
+    lines.push(summary);
+  });
+
+  return lines.join(nl);
+}
+
 function initWorkout(week,day,fatigue,stress){
-  const exs=PROGRAM[week][day]||[];
-  const customRest=S.customRestTimes||{};
+  var exs=PROGRAM[week][day]||[];
+  var customRest=S.customRestTimes||{};
+
   S.active={
-    id:uid(),week,dayName:day,startTime:Date.now(),
+    id:uid(),week:week,dayName:day,startTime:Date.now(),
     fatigue:fatigue||null,stress:stress||null,
-    exercises:exs.map(e=>({
-      name:e.name,url:e.url,technique:e.technique,
-      targetReps:e.reps,rest:e.rest,
-      restSec:customRest[e.name]!==undefined?customRest[e.name]:e.restSec,
-      sets:Array.from({length:e.sets},()=>({weight:'',reps:'',rpe:'',done:false,flag:null,setType:'normal'})),
-      note:''
-    }))
+    exercises:exs.map(function(e){
+      var lp=getLastExPerf(e.name);
+      var lastSets=lp.length>0?lp[0].sets:[];
+      return {
+        name:e.name,url:e.url,technique:e.technique,
+        targetReps:e.reps,rest:e.rest,
+        restSec:customRest[e.name]!==undefined?customRest[e.name]:e.restSec,
+        sets:Array.from({length:e.sets},function(_,si){
+          var last=lastSets[si]||lastSets[lastSets.length-1]||{weight:'',reps:''};
+          return {weight:last.weight||'',reps:last.reps||'',rpe:'',done:false,flag:null,setType:'normal'};
+        }),
+        note:'',aiSuggestion:null
+      };
+    })
   };
   save();
+
   if(S.apiKey){
     window._briefWeek=week;window._briefDay=day;
     showModal(
       '<div class="modal-handle"></div>'+
-      '<div style="text-align:center;padding:8px 0 12px">'+
-      '<div style="font-size:32px;margin-bottom:8px">🤖</div>'+
-      '<div style="font-weight:700;font-size:16px">Briefing du Coach</div>'+
-      '<div style="font-size:13px;color:var(--text2);margin-top:6px;line-height:1.5">Veux-tu un briefing pour ta seance ?</div>'+
+      '<div style="text-align:center;padding:16px 0">'+
+        '<div style="font-size:36px;margin-bottom:12px">🤖</div>'+
+        '<div style="font-weight:700;font-size:17px;margin-bottom:8px">Analyse en cours...</div>'+
+        '<div style="font-size:13px;color:var(--text2);line-height:1.6">Le coach calcule tes charges<br>et prepare ton briefing</div>'+
+        '<div style="margin-top:16px;height:3px;background:var(--border);border-radius:2px;overflow:hidden">'+
+          '<div id="ai-progress-bar" style="height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width 3s ease"></div>'+
+        '</div>'+
       '</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">'+
-      '<button class="btn btn-secondary" onclick="closeModal();nav(\'workout\')">Non merci</button>'+
-      '<button class="btn btn-primary" onclick="closeModal();nav(\'workout\');getBriefing(window._briefWeek,window._briefDay)">🤖 Briefing</button>'+
+      '<div style="margin-top:14px">'+
+        '<button class="btn btn-ghost btn-full btn-sm" onclick="closeModal();nav(\'workout\')">Passer</button>'+
       '</div>'
     );
+    setTimeout(function(){var b=document.getElementById('ai-progress-bar');if(b)b.style.width='85%';},100);
+    getAIChargesAndBriefing(week,day,fatigue,stress);
   }else{
     nav('workout');
   }
 }
 
-// ═══════════════════════════════════════
-// WORKOUT SCREEN
-// ═══════════════════════════════════════
-function renderWorkout(){
-  const scr=document.getElementById('screen');
-  // Reset any styles applied by other screens (coach, etc.)
-  scr.style.paddingBottom='';
-  scr.style.overflow='';
-  scr.style.display='';
-  scr.style.flexDirection='';
-  const aw=S.active;
+async function getAIChargesAndBriefing(week,day,fatigue,stress){
+  var coachCtx=buildCoachContext();
+  var exCtx=buildExerciseContext();
+  var fatigueLabel=['','Epuise','Fatigue','Normal','Bien','Excellent'];
+  var stressLabel=['','Tres stresse','Stresse','Neutre','Calme','Zen'];
+  var wellnessStr=(fatigue?'Energie: '+fatigueLabel[fatigue]+'('+fatigue+'/5)':'Energie non renseignee')+(stress?' | Mental: '+stressLabel[stress]+'('+stress+'/5)':' | Mental non renseigne');
 
-  document.getElementById('topbar-right').innerHTML=aw?`
-    <button class="btn btn-ghost btn-sm" onclick="showAbandon()">Abandonner</button>
-    <button class="btn btn-primary btn-sm" onclick="finishWorkout()">Terminer</button>`:'';
+  var systemPrompt='Tu es un coach de musculation expert en surcharge progressive. Reponds UNIQUEMENT en JSON valide, aucun texte avant ou apres, aucun markdown.';
 
-  if(!aw){
-    scr.innerHTML=`<div class="empty">
-      <div class="empty-icon">🏋️</div>
-      <div class="empty-text">Aucune séance en cours.<br>Démarre un jour depuis l'accueil.</div>
-      <button class="btn btn-primary" onclick="nav('home')">Voir le programme</button>
-    </div>`;
-    return;
-  }
-
-  startChrono();
-
-  const elapsed=formatDur(Date.now()-aw.startTime);
-  scr.innerHTML=`
-    <div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
-      <div>
-        <div style="font-size:17px;font-weight:700">${DAY_ICONS[aw.dayName]||'🏋️'} ${aw.dayName}</div>
-        <div style="font-size:11px;color:var(--text2)" id="chrono-display">⏱ ${elapsed} · Sem. ${aw.week}</div>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-ghost btn-sm" onclick="showCoachDuring()">🤖</button>
-      </div>
-    </div>
-    ${aw.exercises.map((ex,ei)=>renderExBlock(ex,ei)).join('')}
-    <div style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="btn btn-danger" onclick="showAbandon()">🚫 Abandonner</button>
-      <button class="btn btn-primary" onclick="finishWorkout()">🏁 Terminer</button>
-    </div>`;
-}
-
-const SET_FLAGS=[['🤕','Douleur'],['😓','Fatigue'],['⚙️','Technique'],['🔄','Substitution'],['📉','Charge réduite']];
-const SET_TYPES=[['normal','Normal'],['warmup','Warmup'],['drop','Drop Set'],['failure','Échec']];
-
-function renderExBlock(ex,ei){
-  const lastPerf=getLastPerf(ex.name);
-  const lastPerfHtml=lastPerf
-    ?'<div class="last-perf" onclick="showExHistoryByEl(this)" data-exname="'+encodeURIComponent(ex.name)+'">Dernière fois: <span>'+lastPerf.weight+' lbs × '+lastPerf.reps+' reps</span> ('+fmtAgo(lastPerf.date)+') 📈</div>'
-    :'<div class="last-perf" style="color:var(--text3)">Aucun historique — premier essai!</div>';
-
-  const restSec=ex.restSec||120;
-  const restMin=Math.floor(restSec/60),restS=restSec%60;
-  const restLabel=restS>0?restMin+'m'+restS+'s':restMin+'min';
-
-  const setsHtml=ex.sets.map((s,si)=>{
-    const suggestW=lastPerf?lastPerf.weight:'';
-    const suggestR=lastPerf?lastPerf.reps:'';
-    const flagStyle=s.flag?'background:rgba(255,157,0,.12);border-color:rgba(255,157,0,.3)':'';
-    const typeColor=s.setType==='warmup'?'color:var(--accent3)':s.setType==='drop'?'color:var(--accent4)':s.setType==='failure'?'color:var(--accent2)':'color:var(--text3)';
-    return '<div class="set-row" style="'+flagStyle+'">'+
-      '<div class="set-num" style="'+typeColor+';cursor:pointer" onclick="cycleSetType('+ei+','+si+')" title="Type de série">'+getSetTypeIcon(s.setType)+'</div>'+
-      '<input class="set-input" type="number" placeholder="'+(suggestW||'lbs')+'" value="'+(s.weight||'')+'" inputmode="decimal" min="0" step="2.5" onchange="updSet('+ei+','+si+',\'weight\',this.value)">'+
-      '<input class="set-input" type="number" placeholder="'+(suggestR||ex.targetReps)+'" value="'+(s.reps||'')+'" inputmode="numeric" min="0" onchange="updSet('+ei+','+si+',\'reps\',this.value)">'+
-      '<div style="display:flex;flex-direction:column;gap:2px">'+
-        '<input class="set-rpe" type="number" placeholder="RPE" value="'+(s.rpe||'')+'" inputmode="numeric" min="1" max="10" onchange="updSet('+ei+','+si+',\'rpe\',this.value)" onclick="showRPEInfo(event)">'+
-        (s.flag?'<div style="font-size:9px;text-align:center;color:var(--accent4)">'+s.flag+'</div>':'<div style="font-size:9px;text-align:center;color:var(--text3);cursor:pointer" onclick="showFlagMenu('+ei+','+si+')">🚩</div>')+
-      '</div>'+
-      '<div class="set-check'+(s.done?' done':'')+'" onclick="toggleSet('+ei+','+si+')">'+(s.done?'✓':'')+'</div>'+
-    '</div>';
-  }).join('');
-
-  return '<div class="ex-block">'+
-    '<div class="ex-header">'+
-      '<div>'+
-        '<a href="'+ex.url+'" target="_blank" class="ex-name">'+ex.name+' 🔗</a>'+
-        '<div class="ex-meta">'+ex.sets.length+' séries · '+ex.targetReps+' rép.</div>'+
-      '</div>'+
-      '<div style="display:flex;gap:5px;align-items:center">'+
-        '<button class="btn btn-ghost btn-sm" onclick="showExHistoryByEl(this)" data-exname="'+encodeURIComponent(ex.name)+'" title="Historique">📈</button>'+
-        '<button class="btn btn-ghost btn-sm" onclick="showRestEdit('+ei+')" title="Repos">⏱'+restLabel+'</button>'+
-        '<button class="btn btn-secondary btn-sm" onclick="addSet('+ei+')">+</button>'+
-        '<button class="btn btn-ghost btn-sm" onclick="delSet('+ei+')">−</button>'+
-      '</div>'+
-    '</div>'+
-    (ex.technique?'<div class="ex-technique">⚡ DERNIÈRE SÉRIE: '+ex.technique+'</div>':'')+
-    lastPerfHtml+
-    '<div style="padding:6px 14px">'+
-      '<input type="text" placeholder="Note sur cet exercice..." value="'+(ex.note||'')+'" style="font-size:12px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);width:100%;outline:none" onchange="updExNote('+ei+',this.value)">'+
-    '</div>'+
-    '<div class="set-headers" style="grid-template-columns:28px 1fr 1fr 42px 34px">'+
-      '<div class="set-hdr">TYPE</div>'+
-      '<div class="set-hdr">LBS</div>'+
-      '<div class="set-hdr">REPS</div>'+
-      '<div class="set-hdr" onclick="showRPETooltip()" style="cursor:pointer">RPE🚩ℹ️</div>'+
-      '<div></div>'+
-    '</div>'+
-    setsHtml+
-    '<div style="padding:8px 14px 10px">'+
-      '<button class="btn btn-ghost btn-full btn-sm" onclick="startTimer('+restSec+')">⏱ Timer repos ('+restLabel+')</button>'+
-    '</div>'+
-  '</div>';
-}
-
-function getSetTypeIcon(t){
-  if(t==='warmup')return 'W';
-  if(t==='drop')return 'D';
-  if(t==='failure')return 'F';
-  return '#';
-}
-
-function cycleSetType(ei,si){
-  const types=['normal','warmup','drop','failure'];
-  const s=S.active.exercises[ei].sets[si];
-  const idx=types.indexOf(s.setType||'normal');
-  s.setType=types[(idx+1)%types.length];
-  save();renderWorkout();
-}
-
-function showFlagMenu(ei,si){
-  showModal(
-    '<div class="modal-handle"></div>'+
-    '<div class="modal-title">🚩 MARQUER CE SET</div>'+
-    '<div style="font-size:12px;color:var(--text2);margin-bottom:12px">Ce set sera exclu du calcul des PRs</div>'+
-    SET_FLAGS.map(([e,l])=>{
-      var btn=document.createElement('button');
-      btn.className='btn btn-secondary btn-full';
-      btn.style.cssText='margin-bottom:8px;justify-content:flex-start;gap:10px';
-      btn.textContent=e+' '+l;
-      btn.onclick=function(){setFlag(ei,si,e+' '+l);closeModal();renderWorkout();};
-      return btn.outerHTML;
-    }).join('')+
-    '<button class="btn btn-ghost btn-full" onclick="setFlag('+ei+','+si+',null);closeModal();renderWorkout()">✕ Retirer le flag</button>'
-  );
-}
-
-function setFlag(ei,si,flag){
-  if(!S.active)return;
-  S.active.exercises[ei].sets[si].flag=flag;
-  save();
-}
-
-function showRPEInfo(event){
-  if(event.target.value)return; // Only show info if empty
-  // Tooltip-style info already handled by placeholder
-}
-
-function showExHistoryByEl(el){
-  var name=decodeURIComponent(el.getAttribute('data-exname')||'');
-  if(name)showExHistory(name);
-}
-function showExHistory(exName){
-  // Collect all performances for this exercise
-  var perf=[];
-  S.history.forEach(function(h){
-    var ex=(h.exercises||[]).find(function(e){return e.name===exName;});
-    if(ex){
-      var done=ex.sets.filter(function(s){return s.done&&s.weight&&s.reps&&!s.flag;});
-      if(done.length>0){
-        var best=done.reduce(function(b,s){return parseFloat(s.weight)*parseInt(s.reps)>parseFloat(b.weight)*parseInt(b.reps)?s:b;});
-        perf.push({date:h.date,weight:parseFloat(best.weight),reps:parseInt(best.reps),rpe:best.rpe});
-      }
-    }
-  });
-
-  if(perf.length===0){
-    showModal('<div class="modal-handle"></div><div class="modal-title">'+exName+'</div><div style="color:var(--text3);font-size:13px;padding:20px 0">Aucun historique encore — premier essai!</div>');
-    return;
-  }
-
-  // Sort chronologically for chart
-  var chronoPerf=perf.slice().sort(function(a,b){return a.date-b.date;});
-
-  // Find overall PR (best set by weight)
-  var pr=perf.reduce(function(b,p){return p.weight>b.weight||(p.weight===b.weight&&p.reps>b.reps)?p:b;});
-
-  // 1RM history for trend chart
-  var rm1History=chronoPerf.map(function(p){return {date:p.date,rm1:est1RM(p.weight,p.reps),weight:p.weight,reps:p.reps};});
-  var maxRM1=Math.max.apply(null,rm1History.map(function(p){return p.rm1;}));
-  var minRM1=Math.min.apply(null,rm1History.map(function(p){return p.rm1;}));
-  var rangeRM1=maxRM1-minRM1||1;
-
-  // Build SVG chart for 1RM evolution
-  var W=280,H=70,pad=6;
-  var chartHtml='';
-  if(rm1History.length>=2){
-    var pts=rm1History.map(function(p,i){
-      return {
-        x:pad+(i/(rm1History.length-1))*(W-pad*2),
-        y:H-pad-(((p.rm1-minRM1)/rangeRM1)*(H-pad*2)),
-        rm1:p.rm1,weight:p.weight,reps:p.reps,date:p.date
-      };
-    });
-    var path='M'+pts.map(function(p){return p.x+','+p.y;}).join(' L');
-    var areaPath='M'+pts[0].x+','+H+' L'+pts.map(function(p){return p.x+','+p.y;}).join(' L')+' L'+pts[pts.length-1].x+','+H+' Z';
-    var dots=pts.map(function(p){return '<circle cx="'+p.x+'" cy="'+p.y+'" r="3.5" fill="var(--accent3)"/>';}).join('');
-    // Mark PR point
-    var prPt=pts.reduce(function(b,p){return p.rm1>b.rm1?p:b;});
-    var prDot='<circle cx="'+prPt.x+'" cy="'+prPt.y+'" r="5" fill="var(--accent2)" stroke="var(--bg2)" stroke-width="2"/>';
-
-    chartHtml='<div style="margin-bottom:12px">'+
-      '<div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;margin-bottom:6px">ÉVOLUTION DU 1RM ESTIMÉ</div>'+
-      '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px;display:block">'+
-        '<defs><linearGradient id="exg" x1="0" y1="0" x2="0" y2="1">'+
-          '<stop offset="0%" stop-color="#40c8ff" stop-opacity=".25"/>'+
-          '<stop offset="100%" stop-color="#40c8ff" stop-opacity="0"/>'+
-        '</linearGradient></defs>'+
-        '<path d="'+areaPath+'" fill="url(#exg)"/>'+
-        '<path d="'+path+'" fill="none" stroke="var(--accent3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
-        dots+prDot+
-      '</svg>'+
-      '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:3px">'+
-        '<span>'+formatDate(rm1History[0].date)+'</span>'+
-        '<span style="color:var(--accent3);font-weight:700">1RM: '+maxRM1+' lbs</span>'+
-        '<span>'+formatDate(rm1History[rm1History.length-1].date)+'</span>'+
-      '</div>'+
-    '</div>';
-  }
-
-  // Records by rep count
-  var repRecords={};
-  perf.forEach(function(p){
-    if(!repRecords[p.reps]||p.weight>repRecords[p.reps].weight) repRecords[p.reps]=p;
-  });
-  var repKeys=[1,2,3,4,5,6,8,10,12,15,20].filter(function(r){return repRecords[r];});
-
-  // Build modal with DOM to avoid quote issues
-  var container=document.createElement('div');
-  container.innerHTML=
-    '<div class="modal-handle"></div>'+
-    '<div style="font-size:15px;font-weight:700;color:var(--accent3);margin-bottom:12px">📈 '+exName+'</div>'+
-
-    // PR stats
-    '<div class="stat-grid" style="margin-bottom:12px">'+
-      '<div class="stat-box">'+
-        '<div class="stat-val" style="color:var(--accent2)">'+pr.weight+' lbs</div>'+
-        '<div style="font-size:11px;color:var(--text3);margin-top:2px">PR — '+pr.reps+' reps</div>'+
-        '<div style="font-size:10px;color:var(--text3)">'+formatDate(pr.date)+'</div>'+
-      '</div>'+
-      '<div class="stat-box">'+
-        '<div class="stat-val" style="color:var(--accent3)">'+est1RM(pr.weight,pr.reps)+' lbs</div>'+
-        '<div style="font-size:11px;color:var(--text3);margin-top:2px">1RM estimé (Epley)</div>'+
-        '<div style="font-size:10px;color:var(--text3)">Best: '+maxRM1+' lbs</div>'+
-      '</div>'+
-    '</div>'+
-
-    // Chart
-    chartHtml+
-
-    // Records by reps
-    (repKeys.length>0?
-      '<div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;margin-bottom:6px">RECORDS PAR REPS</div>'+
-      '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">'+
-      repKeys.map(function(r){
-        return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;text-align:center">'+
-          '<div style="font-size:13px;font-weight:700;color:var(--accent)">'+repRecords[r].weight+' lbs</div>'+
-          '<div style="font-size:10px;color:var(--text3)">×'+r+' reps</div>'+
-          '<div style="font-size:9px;color:var(--text3)">1RM '+est1RM(repRecords[r].weight,r)+'</div>'+
-        '</div>';
-      }).join('')+
-      '</div>':'') +
-
-    // Full history
-    '<div style="font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;margin-bottom:6px">HISTORIQUE COMPLET ('+perf.length+' séances)</div>'+
-    '<div style="max-height:300px;overflow-y:auto">'+
-    perf.slice().reverse().map(function(p){
-      var isPR=p.weight===pr.weight&&p.reps===pr.reps&&p.date===pr.date;
-      var rm1=est1RM(p.weight,p.reps);
-      return '<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">'+
-        '<div>'+
-          '<div style="font-size:11px;color:var(--text3)">'+formatDate(p.date)+'</div>'+
-          (p.rpe?'<div style="font-size:10px;color:var(--text3)">RPE '+p.rpe+'</div>':'')+''+
-        '</div>'+
-        '<div style="text-align:right">'+
-          '<div style="font-size:13px;font-weight:700;font-family:JetBrains Mono,monospace">'+p.weight+' lbs × '+p.reps+'</div>'+
-          '<div style="font-size:10px;color:var(--accent3)">1RM est. '+rm1+' lbs</div>'+
-        '</div>'+
-        (isPR?'<div style="background:rgba(255,64,64,.15);border:1px solid rgba(255,64,64,.3);border-radius:5px;padding:2px 6px;font-size:9px;font-weight:800;color:var(--accent2)">PR</div>':'<div></div>')+
-      '</div>';
-    }).join('')+
-    '</div>'+
-    '<div style="margin-top:14px"><button class="btn btn-secondary btn-full" onclick="closeModal()">Fermer</button></div>';
-
-  showModal(container.innerHTML);
-}
-
-function showRestEdit(ei){
-  const ex=S.active.exercises[ei];
-  const cur=ex.restSec||120;
-  showModal(
-    '<div class="modal-handle"></div>'+
-    '<div class="modal-title">⏱ TEMPS DE REPOS</div>'+
-    '<div style="font-size:13px;color:var(--text2);margin-bottom:14px">Pour '+ex.name+'<br><span style="font-size:11px;color:var(--text3)">Ce changement sera mémorisé pour les prochains entraînements</span></div>'+
-    '<div style="display:flex;gap:8px;margin-bottom:14px">'+
-      [60,90,120,150,180,240,300].map(s=>{
-        const active=cur===s;
-        const lbl=s<60?s+'s':s%60===0?(s/60)+'min':Math.floor(s/60)+'m'+(s%60)+'s';
-        return '<button onclick="saveRestTime('+ei+','+s+')" style="flex:1;padding:10px 4px;border-radius:8px;border:1px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'var(--accent)':'var(--bg3)')+';color:'+(active?'#0d0d0d':'var(--text)')+';cursor:pointer;font-size:11px;font-weight:600">'+lbl+'</button>';
-      }).join('')+
-    '</div>'+
-    '<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px">'+
-      '<label style="font-size:12px;color:var(--text2);white-space:nowrap">Personnalisé (sec):</label>'+
-      '<input type="number" id="custom-rest" value="'+cur+'" inputmode="numeric" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:JetBrains Mono,monospace;text-align:center;font-size:15px;outline:none">'+
-      '<button class="btn btn-primary btn-sm" onclick="saveRestTimeCustom('+ei+')">OK</button>'+
-    '</div>'
-  );
-}
-
-function saveRestTimeCustom(ei){
-  var val=parseInt(document.getElementById('custom-rest').value)||120;
-  saveRestTime(ei,val);
-}
-function saveRestTime(ei,sec){
-  if(!S.active)return;
-  const exName=S.active.exercises[ei].name;
-  S.active.exercises[ei].restSec=sec;
-  // Save globally for future workouts
-  if(!S.customRestTimes)S.customRestTimes={};
-  S.customRestTimes[exName]=sec;
-  DB.set('customRestTimes',S.customRestTimes);
-  save();
-  closeModal();
-  renderWorkout();
-}
-
-function updExNote(ei,val){
-  if(!S.active)return;
-  S.active.exercises[ei].note=val;
-  save();
-}
-
-function showRPETooltip(){
-  showModal(
-    '<div class="modal-handle"></div>'+
-    '<div class="modal-title">RPE — Effort Perçu</div>'+
-    '<div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">Rate of Perceived Exertion — mesure l&#39;effort sur 10</div>'+
-    [['6','Très facile — 4+ reps en réserve'],['7','Facile — 3 reps en réserve'],['8','Modéré — 2 reps en réserve ← idéal'],['9','Difficile — 1 rep en réserve'],['10','Échec — impossible de continuer']].map(([v,l])=>
-      '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">'+
-        '<div style="font-family:JetBrains Mono,monospace;font-size:18px;font-weight:700;color:var(--accent);width:24px;flex-shrink:0">'+v+'</div>'+
-        '<div style="font-size:13px;color:var(--text2)">'+l+'</div>'+
-      '</div>'
-    ).join('')+
-    '<div style="margin-top:14px"><button class="btn btn-secondary btn-full" onclick="closeModal()">Compris</button></div>'
-  );
-}
-
-function updSet(ei,si,field,val){
-  if(!S.active)return;
-  S.active.exercises[ei].sets[si][field]=field==='rpe'?parseInt(val)||'':parseFloat(val)||'';
-  save();
-}
-
-function toggleSet(ei,si){
-  if(!S.active)return;
-  const s=S.active.exercises[ei].sets[si];
-  s.done=!s.done;
-  save();
-  if(s.done)startTimer(S.active.exercises[ei].restSec||120);
-  renderWorkout();
-}
-
-function addSet(ei){
-  if(!S.active)return;
-  const sets=S.active.exercises[ei].sets;
-  const last=sets[sets.length-1]||{weight:'',reps:'',rpe:'',done:false,flag:null,setType:'normal'};
-  sets.push({weight:last.weight,reps:last.reps,rpe:'',done:false,flag:null,setType:'normal'});
+  var nl='\n';
+  var userMsg='CONTEXTE:'+nl+coachCtx+nl+nl+
+    'ETAT DU JOUR: '+wellnessStr+nl+nl+
+    'EXERCICES ET HISTORIQUE:'+nl+exCtx+nl+nl+
+    'REGLES:'+nl+
+    '- Increment barbell/EZ-bar: +5 lbs | Halteres/Machine/Cable: +2.5 lbs'+nl+
+    '- Augmenter si borne haute atteinte ET RPE<=8 ET pas de flags douleur recents'+nl+
+    '- Maintenir si dans la plage mais pas a la borne haute ou RPE 8-9'+nl+
+    '- Reduire si sous la plage, RPE>=9, flags douleur, energie<=2/5'+nl+
+    '- Vision long terme: analyser tendance 4-6 semaines'+nl+
+    '- Si premier exercice: suggere poids de depart conservateur'+nl+nl+
+    'JSON attendu:'+nl+
+    '{"briefing":"message 80 mots max","charges":{"NOM_EXERCICE":{"weight":0,"reps":0,"note":"raison"}}}';  sets.push({weight:last.weight,reps:last.reps,rpe:'',done:false,flag:null,setType:'normal'});
   save();renderWorkout();
 }
 
