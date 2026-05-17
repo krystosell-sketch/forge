@@ -423,11 +423,17 @@ function onVisibilityChange(){
 // ═══════════════════════════════════════
 function nav(n){
   S.currentNav=n;
-  document.querySelectorAll('.nav-item').forEach(el=>{
+  document.querySelectorAll('.nav-item').forEach(function(el){
     el.classList.toggle('active',el.dataset.nav===n);
   });
-  const screens={home:renderHome,workout:renderWorkout,progress:renderProgress,coach:renderCoach,settings:renderSettings};
-  if(screens[n])screens[n]();
+  // Reset screen styles before rendering
+  var scr=document.getElementById('screen');
+  if(scr){
+    scr.style.cssText='';
+    scr.removeAttribute('style');
+  }
+  var screens={home:renderHome,workout:renderWorkout,progress:renderProgress,coach:renderCoach,settings:renderSettings};
+  if(screens[n]) setTimeout(function(){screens[n]();},50);
 }
 
 // ═══════════════════════════════════════
