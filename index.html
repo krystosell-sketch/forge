@@ -803,7 +803,7 @@ function initWorkout(week,day,fatigue,stress){
         '</div>'+
       '</div>'+
       '<div style="margin-top:14px">'+
-        '<button class="btn btn-ghost btn-full btn-sm" onclick="window._aiAnalysisCancelled=true;closeModal();nav(\'workout\');renderWorkout()">Passer</button>'+
+        '<button class="btn btn-ghost btn-full btn-sm" onclick="window._aiAnalysisCancelled=true;if(window._aiController)window._aiController.abort();closeModal();nav(\'workout\')">Passer</button>'+
       '</div>'
     );
     setTimeout(function(){var b=document.getElementById('ai-progress-bar');if(b)b.style.width='85%';},100);
@@ -831,16 +831,17 @@ async function getAIChargesAndBriefing(week,day,fatigue,stress){
 
   try{
     // Timeout after 20 seconds
-    var controller=new AbortController();
-    var timeout=setTimeout(function(){controller.abort();},20000);
+    window._aiController=new AbortController();
+    var timeout=setTimeout(function(){if(window._aiController)window._aiController.abort();},20000);
 
     var resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      signal:controller.signal,
+      signal:window._aiController.signal,
       headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,system:systemPrompt,messages:[{role:'user',content:userMsg}]})
     });
     clearTimeout(timeout);
+    window._aiController=null;
 
     var data=await resp.json();
     if(data.error){throw new Error(data.error.message);}
@@ -910,10 +911,9 @@ async function getAIChargesAndBriefing(week,day,fatigue,stress){
 // ═══════════════════════════════════════
 function renderWorkout(){
   var scr=document.getElementById('screen');
-  scr.style.paddingBottom='';
-  scr.style.overflow='';
-  scr.style.display='';
-  scr.style.flexDirection='';
+  // Full style reset
+  scr.removeAttribute('style');
+  scr.className='screen';
   var aw=S.active;
 
   document.getElementById('topbar-right').innerHTML=aw?
@@ -1043,6 +1043,7 @@ function delSet(ei){
 function showAbandon(){
   showConfirm('Abandonner la séance?','Elle ne sera PAS sauvegardée dans ton historique.',()=>{
     window._aiAnalysisCancelled=true;
+    if(window._aiController)window._aiController.abort();
     S.active=null;save();stopTimer();stopChrono();
     nav('home');
   },'Abandonner','Continuer');
@@ -1487,6 +1488,8 @@ function calNextMonth(){
 // ═══════════════════════════════════════
 function renderCoach(){
   const scr=document.getElementById('screen');
+  scr.removeAttribute('style');
+  scr.className='screen';
   document.getElementById('topbar-right').innerHTML=`<button class="btn btn-ghost btn-sm" onclick="clearChat()">Effacer</button>`;
 
   const msgs=S.chatHistory.length===0?`
@@ -1499,8 +1502,6 @@ function renderCoach(){
     </div>`
     :S.chatHistory.map(m=>`<div class="chat-msg ${m.role}">${m.content}</div>`).join('');
 
-  scr.style.paddingBottom='0';
-  scr.style.overflow='hidden';
   scr.innerHTML=`
     <div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
       <div id="chat-messages" style="flex:1;overflow-y:auto;padding:10px 14px 16px;display:flex;flex-direction:column;gap:10px">
