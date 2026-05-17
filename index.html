@@ -773,6 +773,7 @@ function initWorkout(week,day,fatigue,stress){
   S.active={
     id:uid(),week:week,dayName:day,startTime:Date.now(),
     fatigue:fatigue||null,stress:stress||null,
+    aiStatus:'pending', // pending | loading | done | error
     exercises:exs.map(function(e){
       var lp=getLastExPerf(e.name);
       var lastSets=lp.length>0?lp[0].sets:[];
@@ -789,37 +790,39 @@ function initWorkout(week,day,fatigue,stress){
     })
   };
   save();
-
+  
+  // Navigate to workout immediately
+  nav('workout');
+  
+  // Launch AI in background if API key exists
   if(S.apiKey){
-    window._briefWeek=week;window._briefDay=day;
-    showModal(
-      '<div class="modal-handle"></div>'+
-      '<div style="text-align:center;padding:16px 0">'+
-        '<div style="font-size:36px;margin-bottom:12px">🤖</div>'+
-        '<div style="font-weight:700;font-size:17px;margin-bottom:8px">Analyse en cours...</div>'+
-        '<div style="font-size:13px;color:var(--text2);line-height:1.6">Le coach calcule tes charges<br>et prepare ton briefing</div>'+
-        '<div style="margin-top:16px;height:3px;background:var(--border);border-radius:2px;overflow:hidden">'+
-          '<div id="ai-progress-bar" style="height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width 3s ease"></div>'+
-        '</div>'+
-      '</div>'+
-      '<div style="margin-top:14px">'+
-        '<button class="btn btn-ghost btn-full btn-sm" onclick="window._aiAnalysisCancelled=true;if(window._aiController)window._aiController.abort();closeModal();nav(\'workout\')">Passer</button>'+
-      '</div>'
-    );
-    setTimeout(function(){var b=document.getElementById('ai-progress-bar');if(b)b.style.width='85%';},100);
+    window._aiAnalysisCancelled=false;
+    window._aiController=null;
     getAIChargesAndBriefing(week,day,fatigue,stress);
-  }else{
-    nav('workout');
   }
 }
 
+
 async function getAIChargesAndBriefing(week,day,fatigue,stress){
+  // Show subtle loading indicator in workout screen
+  function setAIStatus(status,msg){
+    var el=document.getElementById('ai-status-bar');
+    if(!el) return;
+    if(status==='loading') el.innerHTML='<span style="color:var(--text3);font-size:11px">🤖 Calcul des charges IA en cours...</span>';
+    else if(status==='done') el.innerHTML='<span style="color:var(--accent);font-size:11px">🤖 '+msg+'</span>';
+    else if(status==='error') el.innerHTML='';
+  }
+
+  // Wait a tick to ensure workout screen is rendered
+  await new Promise(function(r){setTimeout(r,300);});
+  setAIStatus('loading');
+
   var exCtx=buildExerciseContext();
   var ps=S.programState;
   var p=S.profile||{};
   var fatigueLabel=['','Epuise','Fatigue','Normal','Bien','Excellent'];
   var stressLabel=['','Tres stresse','Stresse','Neutre','Calme','Zen'];
-  var wellStr=(fatigue?fatigueLabel[fatigue]+fatigue+'/5':'?')+'|'+(stress?stressLabel[stress]+stress+'/5':'?');
+  var wellStr=(fatigue?fatigueLabel[fatigue]+'('+fatigue+'/5)':'?')+'|'+(stress?stressLabel[stress]+'('+stress+'/5)':'?');
   var nl='\n';
 
   var systemPrompt='Coach musculation surcharge progressive. Reponds JSON UNIQUEMENT sans texte ni markdown.';
@@ -830,9 +833,8 @@ async function getAIChargesAndBriefing(week,day,fatigue,stress){
     'RETOURNE: {"briefing":"50 mots max","charges":{"NOM_EXACT":{"weight":0,"reps":0,"note":"court"}}}';
 
   try{
-    // Timeout after 20 seconds
     window._aiController=new AbortController();
-    var timeout=setTimeout(function(){if(window._aiController)window._aiController.abort();},20000);
+    var timeout=setTimeout(function(){if(window._aiController)window._aiController.abort();},25000);
 
     var resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -843,22 +845,21 @@ async function getAIChargesAndBriefing(week,day,fatigue,stress){
     clearTimeout(timeout);
     window._aiController=null;
 
+    if(window._aiAnalysisCancelled||!S.active){return;}
+
     var data=await resp.json();
     if(data.error){throw new Error(data.error.message);}
 
     var text=(data.content&&data.content[0]&&data.content[0].text)||'{}';
     text=text.replace(/```json|```/g,'').trim();
-    // Find JSON object in response
     var jsonStart=text.indexOf('{');
     var jsonEnd=text.lastIndexOf('}');
     if(jsonStart>=0&&jsonEnd>jsonStart) text=text.slice(jsonStart,jsonEnd+1);
     var result=JSON.parse(text);
 
-    // Apply AI charge suggestions
-    // If user cancelled or abandoned, don't apply results
-    if(window._aiAnalysisCancelled || !S.active){
-      return;
-    }
+    if(window._aiAnalysisCancelled||!S.active){return;}
+
+    // Apply suggestions
     if(result.charges&&S.active){
       S.active.exercises.forEach(function(ex){
         var sug=result.charges[ex.name];
@@ -867,35 +868,21 @@ async function getAIChargesAndBriefing(week,day,fatigue,stress){
           ex.sets.forEach(function(s){if(!s.done){s.weight=sug.weight;s.reps=sug.reps||'';}});
         }
       });
+      S.active.aiStatus='done';
+      S.active.aiBriefing=result.briefing||'';
       save();
     }
 
-    // Complete progress bar
-    var bar=document.getElementById('ai-progress-bar');
-    if(bar) bar.style.width='100%';
-
-    setTimeout(function(){
-      closeModal();
-      showModal(
-        '<div class="modal-handle"></div>'+
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'+
-          '<div style="font-size:28px">🤖</div>'+
-          '<div style="font-weight:700;font-size:16px">Charges + Briefing prets!</div>'+
-        '</div>'+
-        '<div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:12px;padding:12px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)">'+
-          (result.briefing||'Bonne seance!')+
-        '</div>'+
-        '<div style="font-size:11px;color:var(--accent);margin-bottom:14px">Charges recommandees pre-remplies dans ta seance</div>'+
-        '<button class="btn btn-primary btn-full" onclick="closeModal();nav(\'workout\');renderWorkout()">Commencer →</button>'
-      );
-    },300);
+    // Refresh workout screen with new weights
+    if(S.currentNav==='workout') renderWorkout();
+    setAIStatus('done','Charges mises a jour! '+( result.briefing||''));
 
   }catch(e){
-    closeModal();
-    if(window._aiAnalysisCancelled||!S.active){return;}
-    nav('workout');
+    window._aiController=null;
+    setAIStatus('error','');
   }
 }
+
 
 // ═══════════════════════════════════════
 // WORKOUT SCREEN
@@ -918,13 +905,21 @@ function renderWorkout(){
 
   startChrono();
   var elapsed=formatDur(Date.now()-aw.startTime);
+  var aiStatusHtml='';
+  if(aw.aiStatus==='done'&&aw.aiBriefing){
+    aiStatusHtml='<div id="ai-status-bar" style="padding:6px 14px;font-size:11px;color:var(--accent);background:rgba(200,255,0,.06);border-bottom:1px solid rgba(200,255,0,.15)">🤖 '+aw.aiBriefing+'</div>';
+  } else if(!aw.aiStatus||aw.aiStatus==='pending'||aw.aiStatus==='loading'){
+    aiStatusHtml='<div id="ai-status-bar" style="padding:6px 14px"></div>';
+  }
+
   var html='<div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center">'+
     '<div>'+
       '<div style="font-size:17px;font-weight:700">'+(DAY_ICONS[aw.dayName]||'🏋️')+' '+aw.dayName+'</div>'+
       '<div style="font-size:11px;color:var(--text2)" id="chrono-display">⏱ '+elapsed+' · Sem. '+aw.week+'</div>'+
     '</div>'+
     '<button class="btn btn-ghost btn-sm" onclick="showCoachDuring()">🤖</button>'+
-  '</div>';
+  '</div>'+
+  aiStatusHtml;
 
   aw.exercises.forEach(function(ex,ei){html+=renderExBlock(ex,ei);});
 
