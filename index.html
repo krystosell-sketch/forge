@@ -825,7 +825,135 @@ async function getAIChargesAndBriefing(week,day,fatigue,stress){
     '- Vision long terme: analyser tendance 4-6 semaines'+nl+
     '- Si premier exercice: suggere poids de depart conservateur'+nl+nl+
     'JSON attendu:'+nl+
-    '{"briefing":"message 80 mots max","charges":{"NOM_EXERCICE":{"weight":0,"reps":0,"note":"raison"}}}';  sets.push({weight:last.weight,reps:last.reps,rpe:'',done:false,flag:null,setType:'normal'});
+    '{"briefing":"message 80 mots max","charges":{"NOM_EXERCICE":{"weight":0,"reps":0,"note":"raison"}}}';
+
+}
+
+// ═══════════════════════════════════════
+// WORKOUT SCREEN
+// ═══════════════════════════════════════
+function renderWorkout(){
+  var scr=document.getElementById('screen');
+  scr.style.paddingBottom='';
+  scr.style.overflow='';
+  scr.style.display='';
+  scr.style.flexDirection='';
+  var aw=S.active;
+
+  document.getElementById('topbar-right').innerHTML=aw?
+    '<button class="btn btn-ghost btn-sm" onclick="showAbandon()">Abandonner</button>'+
+    '<button class="btn btn-primary btn-sm" onclick="finishWorkout()">Terminer</button>':'';
+
+  if(!aw){
+    scr.innerHTML='<div class="empty"><div class="empty-icon">🏋️</div><div class="empty-text">Aucune seance en cours.<br>Demarre un jour depuis l\'accueil.</div><button class="btn btn-primary" onclick="nav(\'home\')">Voir le programme</button></div>';
+    return;
+  }
+
+  startChrono();
+  var elapsed=formatDur(Date.now()-aw.startTime);
+  var html='<div style="padding:10px 14px;display:flex;justify-content:space-between;align-items:center">'+
+    '<div>'+
+      '<div style="font-size:17px;font-weight:700">'+(DAY_ICONS[aw.dayName]||'🏋️')+' '+aw.dayName+'</div>'+
+      '<div style="font-size:11px;color:var(--text2)" id="chrono-display">⏱ '+elapsed+' · Sem. '+aw.week+'</div>'+
+    '</div>'+
+    '<button class="btn btn-ghost btn-sm" onclick="showCoachDuring()">🤖</button>'+
+  '</div>';
+
+  aw.exercises.forEach(function(ex,ei){html+=renderExBlock(ex,ei);});
+
+  html+='<div style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    '<button class="btn btn-danger" onclick="showAbandon()">🚫 Abandonner</button>'+
+    '<button class="btn btn-primary" onclick="finishWorkout()">🏁 Terminer</button>'+
+  '</div>';
+
+  scr.innerHTML=html;
+}
+
+function renderExBlock(ex,ei){
+  var lastPerf=getLastExPerf(ex.name);
+  var lp=lastPerf.length>0?lastPerf[0]:null;
+  var lastPerfHtml=lp?
+    '<div class="last-perf" onclick="showExHistoryByEl(this)" data-exname="'+encodeURIComponent(ex.name)+'">Dernière fois: <span>'+lp.bestWeight+' lbs × '+lp.bestReps+' reps</span> ('+fmtAgo(lp.date)+') 📈</div>':
+    '<div class="last-perf" style="color:var(--text3)">Premier essai!</div>';
+
+  var restSec=ex.restSec||120;
+  var restMin=Math.floor(restSec/60),restS=restSec%60;
+  var restLabel=restS>0?restMin+'m'+restS+'s':restMin+'min';
+
+  // AI suggestion badge
+  var aiHtml='';
+  if(ex.aiSuggestion){
+    aiHtml='<div style="margin:0 14px 6px;padding:7px 10px;background:rgba(200,255,0,.08);border:1px solid rgba(200,255,0,.2);border-radius:8px;font-size:11px;color:var(--accent)">'+
+      '🤖 IA: '+ex.aiSuggestion.weight+' lbs × '+ex.aiSuggestion.reps+' reps — '+ex.aiSuggestion.note+
+    '</div>';
+  }
+
+  var setsHtml=ex.sets.map(function(s,si){
+    return '<div class="set-row"'+( s.flag?'style="background:rgba(255,157,0,.08);border-color:rgba(255,157,0,.3)"':'')+'>'+
+      '<div class="set-num" style="'+(s.setType==='warmup'?'color:var(--accent3)':s.setType==='drop'?'color:var(--accent4)':s.setType==='failure'?'color:var(--accent2)':'color:var(--text3)')+';cursor:pointer" onclick="cycleSetType('+ei+','+si+')" title="Type">'+getSetTypeIcon(s.setType)+'</div>'+
+      '<input class="set-input" type="number" placeholder="lbs" value="'+(s.weight||'')+'" inputmode="decimal" min="0" step="2.5" onchange="updSet('+ei+','+si+',\'weight\',this.value)">'+
+      '<input class="set-input" type="number" placeholder="'+ex.targetReps+'" value="'+(s.reps||'')+'" inputmode="numeric" min="0" onchange="updSet('+ei+','+si+',\'reps\',this.value)">'+
+      '<div style="display:flex;flex-direction:column;gap:2px">'+
+        '<input class="set-rpe" type="number" placeholder="RPE" value="'+(s.rpe||'')+'" inputmode="numeric" min="1" max="10" onchange="updSet('+ei+','+si+',\'rpe\',this.value)">'+
+        (s.flag?'<div style="font-size:9px;text-align:center;color:var(--accent4)">'+s.flag+'</div>':'<div style="font-size:9px;text-align:center;color:var(--text3);cursor:pointer" onclick="showFlagMenu('+ei+','+si+')">🚩</div>')+
+      '</div>'+
+      '<div class="set-check'+(s.done?' done':'')+'" onclick="toggleSet('+ei+','+si+')">'+(s.done?'✓':'')+'</div>'+
+    '</div>';
+  }).join('');
+
+  return '<div class="ex-block">'+
+    '<div class="ex-header">'+
+      '<div>'+
+        '<a href="'+ex.url+'" target="_blank" class="ex-name">'+ex.name+' 🔗</a>'+
+        '<div class="ex-meta">'+ex.sets.length+' séries · '+ex.targetReps+' rép.</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:5px;align-items:center">'+
+        '<button class="btn btn-ghost btn-sm" onclick="showExHistoryByEl(this)" data-exname="'+encodeURIComponent(ex.name)+'" title="Historique">📈</button>'+
+        '<button class="btn btn-ghost btn-sm" onclick="showRestEdit('+ei+')" title="Repos">⏱'+restLabel+'</button>'+
+        '<button class="btn btn-secondary btn-sm" onclick="addSet('+ei+')">+</button>'+
+        '<button class="btn btn-ghost btn-sm" onclick="delSet('+ei+')">−</button>'+
+      '</div>'+
+    '</div>'+
+    (ex.technique?'<div class="ex-technique">⚡ DERNIÈRE SÉRIE: '+ex.technique+'</div>':'')+
+    aiHtml+
+    lastPerfHtml+
+    '<div style="padding:6px 14px">'+
+      '<input type="text" placeholder="Note sur cet exercice..." value="'+(ex.note||'')+'" style="font-size:12px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);width:100%;outline:none" onchange="updExNote('+ei+',this.value)">'+
+    '</div>'+
+    '<div class="set-headers" style="grid-template-columns:28px 1fr 1fr 42px 34px">'+
+      '<div class="set-hdr">TYPE</div>'+
+      '<div class="set-hdr">LBS</div>'+
+      '<div class="set-hdr">REPS</div>'+
+      '<div class="set-hdr" onclick="showRPETooltip()" style="cursor:pointer">RPE🚩ℹ️</div>'+
+      '<div></div>'+
+    '</div>'+
+    setsHtml+
+    '<div style="padding:8px 14px 10px">'+
+      '<button class="btn btn-ghost btn-full btn-sm" onclick="startTimer('+restSec+')">⏱ Timer repos ('+restLabel+')</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function updSet(ei,si,field,val){
+  if(!S.active)return;
+  S.active.exercises[ei].sets[si][field]=field==='rpe'?parseInt(val)||'':parseFloat(val)||'';
+  save();
+}
+
+function toggleSet(ei,si){
+  if(!S.active)return;
+  var s=S.active.exercises[ei].sets[si];
+  s.done=!s.done;
+  save();
+  if(s.done)startTimer(S.active.exercises[ei].restSec||120);
+  renderWorkout();
+}
+
+function addSet(ei){
+  if(!S.active)return;
+  var sets=S.active.exercises[ei].sets;
+  var last=sets[sets.length-1]||{weight:'',reps:'',rpe:'',done:false,flag:null,setType:'normal'};
+  sets.push({weight:last.weight,reps:last.reps,rpe:'',done:false,flag:null,setType:'normal'});
   save();renderWorkout();
 }
 
