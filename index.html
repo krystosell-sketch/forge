@@ -433,7 +433,7 @@ function nav(n){
     scr.removeAttribute('style');
   }
   var screens={home:renderHome,workout:renderWorkout,progress:renderProgress,coach:renderCoach,settings:renderSettings};
-  if(screens[n]) setTimeout(function(){screens[n]();},50);
+  if(screens[n]) screens[n]();
 }
 
 // ═══════════════════════════════════════
@@ -520,7 +520,7 @@ function renderHome(){
   const totalSessions=S.history.length;
 
   const activeBanner=S.active?`
-    <div class="active-banner" onclick="nav('workout');renderWorkout()">
+    <div class="active-banner" onclick="nav('workout')">
       <div><div style="font-size:13px;font-weight:700"><span class="pulse"></span>Séance en cours</div>
       <div style="font-size:11px;color:var(--text2);margin-top:2px">${S.active.dayName} — Sem. ${S.active.week}</div></div>
       <span style="color:var(--accent);font-size:22px">›</span>
@@ -763,6 +763,9 @@ function buildExerciseContext(){
   return lines.join(nl);
 }
 
+// Global flag to cancel ongoing AI analysis
+window._aiAnalysisCancelled = false;
+
 function initWorkout(week,day,fatigue,stress){
   var exs=PROGRAM[week][day]||[];
   var customRest=S.customRestTimes||{};
@@ -800,7 +803,7 @@ function initWorkout(week,day,fatigue,stress){
         '</div>'+
       '</div>'+
       '<div style="margin-top:14px">'+
-        '<button class="btn btn-ghost btn-full btn-sm" onclick="closeModal();nav(\'workout\');renderWorkout()">Passer</button>'+
+        '<button class="btn btn-ghost btn-full btn-sm" onclick="window._aiAnalysisCancelled=true;closeModal();nav(\'workout\');renderWorkout()">Passer</button>'+
       '</div>'
     );
     setTimeout(function(){var b=document.getElementById('ai-progress-bar');if(b)b.style.width='85%';},100);
@@ -851,6 +854,10 @@ async function getAIChargesAndBriefing(week,day,fatigue,stress){
     var result=JSON.parse(text);
 
     // Apply AI charge suggestions
+    // If user cancelled or abandoned, don't apply results
+    if(window._aiAnalysisCancelled || !S.active){
+      return;
+    }
     if(result.charges&&S.active){
       S.active.exercises.forEach(function(ex){
         var sug=result.charges[ex.name];
@@ -1035,6 +1042,7 @@ function delSet(ei){
 
 function showAbandon(){
   showConfirm('Abandonner la séance?','Elle ne sera PAS sauvegardée dans ton historique.',()=>{
+    window._aiAnalysisCancelled=true;
     S.active=null;save();stopTimer();stopChrono();
     nav('home');
   },'Abandonner','Continuer');
